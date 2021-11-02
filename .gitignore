@@ -1,0 +1,4 @@
+src/data/credential.json
+dist/
+
+node_modules/

@@ -1,0 +1,10 @@
+{
+  "log": {
+    "interval": 86400000,
+    "directory": "logs"
+  },
+  "guild": "809809541385682964",
+  "roleCategory": "904930256299888680",
+  "roleChannel": "904930579886243942",
+  "logChannel": "822847252623392830"
+}

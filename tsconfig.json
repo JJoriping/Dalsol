@@ -1,0 +1,18 @@
+{
+  "extends": "@tsconfig/node16/tsconfig.json",
+
+  "compilerOptions": {
+    "outDir": "dist",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "noImplicitOverride": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "data",
+    "node_modules"
+  ]
+}
