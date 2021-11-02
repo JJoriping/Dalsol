@@ -1,4 +1,4 @@
-import { Client, Intents } from "discord.js";
+import { Client, Intents, TextChannel } from "discord.js";
 import { getBasePreset } from "./components/BasePreset";
 import { getEmbedMessage } from "./components/EmbedMessage";
 import CREDENTIAL from "./data/credential.json";
@@ -20,6 +20,23 @@ const client = new Client({
 async function main():Promise<void>{
   client.once('ready', async () => {
     const guild = await client.guilds.fetch(SETTINGS.guild);
+    // for(const v of guild.channels.cache.toJSON()){
+    //   if(v.parentId !== "904930256299888680"){
+    //     continue;
+    //   }
+    //   if(!/^[가-힣\w-]+$/.test(v.name)){
+    //     continue;
+    //   }
+    //   if(v.isThread()){
+    //     continue;
+    //   }
+    //   await v.permissionOverwrites.create(guild.roles.everyone, {
+    //     'VIEW_CHANNEL': false,
+    //     'CREATE_PUBLIC_THREADS': false,
+    //     'CREATE_PRIVATE_THREADS': false
+    //   });
+    // }
+    // process.exit(0);
     const logChannel = await client.channels.fetch(SETTINGS.logChannel);
     const roleChannel = await client.channels.fetch(SETTINGS.roleChannel);
     if(!logChannel?.isText()) throw Error(`Invalid logChannel: ${SETTINGS.logChannel}`);
@@ -28,6 +45,25 @@ async function main():Promise<void>{
     await roleChannel.messages.fetch();
     client.on('messageCreate', async message => {
       if(message.channelId !== SETTINGS.roleChannel){
+        if(message.channel.type === "GUILD_TEXT" && message.channel.parentId === SETTINGS.roleCategory && message.author.bot){
+          // 봇에게 VIEW_CHANNEL가 없다면 그 채널에선 그 봇을 사용할 수 없다.
+          if(!message.channel.permissionsFor(message.author)?.has('VIEW_CHANNEL')){
+            message.channel.send({
+              content: message.interaction ? `<@${message.interaction.user.id}>` : undefined,
+              embeds: [{
+                title: "⚠ 경고",
+                color: 'ORANGE',
+                description: [
+                  "채널 주제와 관련이 없는 봇의 사용은 지양해 주시기 바랍니다.",
+                  `혹시 <@${message.author.id}> 봇이 이 채널과 관련이 있다고 생각하신다면 위성지기에게 알려 주세요.`,
+                  "",
+                  `> 봇의 출력: ${message.content || "*(비어 있음)*"}`
+                ].join('\n')
+              }]
+            });
+            await message.delete();
+          }
+        }
         return;
       }
       const chunk = message.content.match(/^생성 (.+) <@&(\d+)> ([0-9A-F]+)( [^\x00-\xFF]+| <.+>)?$/i);
