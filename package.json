@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "start": "bash tools/reviver.sh"
+    "start": "node dist/Main.js"
   },
   "devDependencies": {
     "@tsconfig/node16": "^1.0.2",

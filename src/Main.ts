@@ -125,3 +125,9 @@ async function main():Promise<void>{
   await client.login(CREDENTIAL.token);
 }
 main();
+process.on('uncaughtException', e => {
+  Logger.error("Unhandled Exception").put(e.stack).out();
+});
+process.on('unhandledRejection', e => {
+  Logger.error("Unhandled Rejection").put(e instanceof Error ? e.stack : e).out();
+});
