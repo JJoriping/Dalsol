@@ -20,6 +20,7 @@ const client = new Client({
 async function main():Promise<void>{
   client.once('ready', async () => {
     const guild = await client.guilds.fetch(SETTINGS.guild);
+    const webhooks = await guild.fetchWebhooks();
     // for(const v of guild.channels.cache.toJSON()){
     //   if(v.parentId !== "904930256299888680"){
     //     continue;
@@ -45,7 +46,11 @@ async function main():Promise<void>{
     await roleChannel.messages.fetch();
     client.on('messageCreate', async message => {
       if(message.channelId !== SETTINGS.roleChannel){
-        if(message.channel.type === "GUILD_TEXT" && message.channel.parentId === SETTINGS.roleCategory && message.author.bot){
+        if(message.channel.type === "GUILD_TEXT"
+          && message.channel.parentId === SETTINGS.roleCategory
+          && message.author.bot
+          && !webhooks.has(message.webhookId || "")
+        ){
           // 봇에게 VIEW_CHANNEL가 없다면 그 채널에선 그 봇을 사용할 수 없다.
           if(!message.channel.permissionsFor(message.author)?.has('VIEW_CHANNEL')){
             message.channel.send({
