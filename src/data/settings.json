@@ -6,5 +6,11 @@
   "guild": "809809541385682964",
   "roleCategory": "904930256299888680",
   "roleChannel": "904930579886243942",
-  "logChannel": "822847252623392830"
+  "logChannel": "822847252623392830",
+  "guestWelcomeChannel": "923189241901633596",
+  "regularRole": "923200636177219645",
+  "captcha": {
+    "width": 600,
+    "height": 300
+  }
 }
