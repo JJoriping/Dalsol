@@ -7,6 +7,7 @@ import CREDENTIAL from "./data/credential.json";
 import SETTINGS from "./data/settings.json";
 import { DateUnit } from "./enums/DateUnit";
 import { Logger } from "./utils/Logger";
+import { SpamKicker } from "./utils/SpamKicker";
 import { randInt, sleep } from "./utils/Utility";
 
 const enum FooterStigma{
@@ -23,6 +24,7 @@ const client = new Client({
   retryLimit: 3
 });
 const captchaTable = new Map<string, [data:Captcha, channel:string, expired:number]>();
+const spamKicker = new SpamKicker();
 
 async function main():Promise<void>{
   client.once('ready', async () => {
@@ -59,7 +61,14 @@ async function main():Promise<void>{
     }
 
     client.on('guildMemberAdd', async member => {
-      Logger.info("Member Add").put(member.id).next("Tag").put(member.user.tag).out();
+      Logger.info("Member Add").put(member.id)
+        .next("Tag").put(member.user.tag)
+        .next("Birth").put(member.user.createdAt.toLocaleString())
+        .out()
+      ;
+      if(!spamKicker.in(member)){
+        return;
+      }
       const thread = await guestWelcomeChannel.threads.create({
         name: `${member.user.username} 님의 스레드`,
         type: 'GUILD_PRIVATE_THREAD', // 부스트 2단계 이상이어야 한다.
@@ -69,7 +78,7 @@ async function main():Promise<void>{
       });
       let message = await thread.send({
         content: [
-          `<@${member.id}> 님, 달달소에 오신 걸 환영합니다 :wave:`,
+          `<@${member.id}> 님, ${guild.name}에 오신 걸 환영합니다 :wave:`,
           `대화에 참여하시기 전 꼭 <#${SETTINGS.guestWelcomeChannel}> 채널의 모든 규칙을 읽고 지켜 주세요!`,
           "준비가 되셨다면 제가 보내 드린 그림에서 선이 이어진 6글자를 입력해 주세요."
         ].join('\n'),
@@ -109,7 +118,7 @@ async function main():Promise<void>{
           embeds: [{
             title: "✨ 입장 완료!",
             color: 'GREEN',
-            description: "협조해 주셔서 감사합니다! 즐거운 달달소 여행 되세요 😉",
+            description: `협조해 주셔서 감사합니다! 즐거운 ${guild.name} 여행 되세요 😉`,
             footer: {
               text: "이 스레드는 1분 뒤 삭제됩니다."
             }
@@ -148,7 +157,7 @@ async function main():Promise<void>{
                 color: 'ORANGE',
                 description: [
                   "채널 주제와 관련이 없는 봇의 사용은 지양해 주시기 바랍니다.",
-                  `혹시 <@${message.author.id}> 봇이 이 채널과 관련이 있다고 생각하신다면 위성지기에게 알려 주세요.`,
+                  `혹시 <@${message.author.id}> 봇이 이 채널과 관련이 있다고 생각하신다면 관리자에게 알려 주세요.`,
                   "",
                   `> 봇의 출력: ${message.content || "*(비어 있음)*"}`
                 ].join('\n')
