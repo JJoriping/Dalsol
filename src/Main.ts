@@ -19,7 +19,8 @@ const client = new Client({
     Intents.FLAGS.GUILDS,
     Intents.FLAGS.GUILD_MEMBERS,
     Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.GUILD_MESSAGE_REACTIONS
+    Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+    Intents.FLAGS.GUILD_VOICE_STATES
   ],
   retryLimit: 3
 });
@@ -45,6 +46,27 @@ async function main():Promise<void>{
     //     'CREATE_PUBLIC_THREADS': false,
     //     'CREATE_PRIVATE_THREADS': false
     //   });
+    // }
+    // for(const [ k, v ] of await guild.members.fetch()){
+    //   const hasRole = v.roles.cache.has("923200636177219645");
+
+    //   if(v.user.bot || hasRole) continue;
+    //   console.log(v.user.tag);
+    //   try{
+    //     const channel = await v.createDM();
+
+    //     await channel.send({
+    //       embeds: [{
+    //         title: "시간 초과",
+    //         color: 'ORANGE',
+    //         description: [
+    //           `인증을 기한 내에 받지 않아 ${v.guild.name} 서버에서 추방되었어요.`,
+    //           "다시 인증을 시도해 주세요."
+    //         ].join('\n')
+    //       }]
+    //     });
+    //   }catch(e){}
+    //   await v.kick("인증 시간 초과");
     // }
     // process.exit(0);
     const logChannel = await client.channels.fetch(SETTINGS.logChannel);
@@ -80,7 +102,7 @@ async function main():Promise<void>{
         content: [
           `<@${member.id}> 님, ${guild.name}에 오신 걸 환영합니다 :wave:`,
           `대화에 참여하시기 전 꼭 <#${SETTINGS.guestWelcomeChannel}> 채널의 모든 규칙을 읽고 지켜 주세요!`,
-          "준비가 되셨다면 제가 보내 드린 그림에서 선이 이어진 6글자를 입력해 주세요."
+          "준비가 되셨다면 제가 보내 드린 그림에서 선이 이어진 6글자(대문자와 숫자 조합)를 입력해 주세요."
         ].join('\n'),
         files: [
           new MessageAttachment(await registerCaptcha(member.id, thread.id), "captcha.png")
@@ -113,6 +135,7 @@ async function main():Promise<void>{
           });
           return;
         }
+        captchaTable.delete(member.id);
         collector.stop("인증 성공");
         await v.reply({
           embeds: [{
@@ -129,8 +152,23 @@ async function main():Promise<void>{
         }, DateUnit.MINUTE);
         await member.roles.add(SETTINGS.regularRole);
       });
-      collector.once('end', () => {
-        captchaTable.delete(member.id);
+      collector.once('end', async () => {
+        if(!captchaTable.delete(member.id)) return;
+        try{
+          const channel = await member.createDM();
+
+          await channel.send({
+            embeds: [{
+              title: "시간 초과",
+              color: 'ORANGE',
+              description: [
+                `인증을 기한 내에 받지 않아 ${member.guild.name} 서버에서 추방되었어요.`,
+                "다시 인증을 시도해 주세요."
+              ].join('\n')
+            }]
+          });
+        }catch(e){}
+        await member.kick("인증 시간 초과");
       });
     });
     client.on('guildMemberRemove', async member => {
@@ -257,6 +295,21 @@ async function main():Promise<void>{
         await getEmbedMessage(message)
       );
       logChannel.send(data);
+    });
+    client.on('voiceStateUpdate', async (before, after) => {
+      if(before.channelId === after.channelId){
+        return;
+      }
+      Logger.info("Voice State").put(after.member?.id)
+        .next("Before").put(before.channelId)
+        .next("After").put(after.channelId)
+        .out()
+      ;
+      if(before.channelId && !after.channelId){
+        await after.member?.roles.remove(SETTINGS.voiceChannelParticipantRole, "음성 채널 퇴장");
+      }else if(!before.channelId && after.channelId){
+        await after.member?.roles.add(SETTINGS.voiceChannelParticipantRole, "음성 채널 입장");
+      }
     });
     Logger.success("Discord").put(client.user?.tag).out();
   });
