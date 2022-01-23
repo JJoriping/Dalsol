@@ -13,5 +13,6 @@
   "captcha": {
     "width": 600,
     "height": 300
-  }
+  },
+  "scamTimeout": 3600000
 }

@@ -14,6 +14,9 @@ const enum FooterStigma{
   GAME_ROLE = "게임 역할 받기"
 }
 
+const SCAM_TABLE = {
+  '허위 니트로 링크': "https://discode.gift"
+};
 const client = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
@@ -82,6 +85,7 @@ async function main():Promise<void>{
       await sleep(1);
     }
 
+    // 기능: 새 회원 captcha 심사
     client.on('guildMemberAdd', async member => {
       Logger.info("Member Add").put(member.id)
         .next("Tag").put(member.user.tag)
@@ -180,13 +184,37 @@ async function main():Promise<void>{
       channel.delete("유저 퇴장");
     });
     client.on('messageCreate', async message => {
+      // 기능: 금지된 내용 검열
+      for(const [ k, v ] of Object.entries(SCAM_TABLE)){
+        if(!message.content.includes(v)){
+          continue;
+        }
+        Logger.warning("Scam").put(message.author.id)
+          .next("Content").put(message.content)
+          .next("Reason").put(k)
+          .out()
+        ;
+        await message.member?.timeout(SETTINGS.scamTimeout, k);
+        await message.reply({
+          embeds: [{
+            title: "⚠ 경고",
+            color: 'ORANGE',
+            description: [
+              "금지된 내용 입력이 감지되어 자동 타임아웃 처리되었습니다.",
+              `> 사유: ${k}`
+            ].join('\n')
+          }]
+        });
+        await message.delete();
+      }
+      // 기능: 로봇 사용 가능 채널 검사
       if(message.channelId !== SETTINGS.roleChannel){
         if(message.channel.type === "GUILD_TEXT"
           && message.channel.parentId === SETTINGS.roleCategory
           && message.author.bot
           && !webhooks.has(message.webhookId || "")
         ){
-          // 봇에게 VIEW_CHANNEL가 없다면 그 채널에선 그 봇을 사용할 수 없다.
+          // NOTE 봇에게 VIEW_CHANNEL가 없다면 그 채널에선 그 봇을 사용할 수 없다.
           if(!message.channel.permissionsFor(message.author)?.has('VIEW_CHANNEL')){
             message.channel.send({
               content: message.interaction ? `<@${message.interaction.user.id}>` : undefined,
@@ -206,6 +234,7 @@ async function main():Promise<void>{
         }
         return;
       }
+      // 기능: 역할 부여기 생성
       const chunk = message.content.match(/^생성 (.+) <@&(\d+)> ([0-9A-F]+)( [^\x00-\xFF]+| <.+>)?$/i);
       if(!chunk) return;
       const name = chunk[1];
@@ -271,6 +300,7 @@ async function main():Promise<void>{
         } break;
       }
     });
+    // 기능: 메시지 수정·삭제 이력
     client.on('messageUpdate', async (before, after) => {
       if(before.author?.bot){
         return;
@@ -296,6 +326,7 @@ async function main():Promise<void>{
       );
       logChannel.send(data);
     });
+    // 기능: 음성 채널 전용 역할 부여
     client.on('voiceStateUpdate', async (before, after) => {
       if(before.channelId === after.channelId){
         return;
