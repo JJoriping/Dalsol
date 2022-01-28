@@ -15,7 +15,7 @@ const enum FooterStigma{
 }
 
 const SCAM_TABLE = {
-  '허위 니트로 링크': "https://discode.gift"
+  '허위 니트로 링크': /https:\/\/disc\w*de?\.gift\//
 };
 const client = new Client({
   intents: [
@@ -186,7 +186,7 @@ async function main():Promise<void>{
     client.on('messageCreate', async message => {
       // 기능: 금지된 내용 검열
       for(const [ k, v ] of Object.entries(SCAM_TABLE)){
-        if(!message.content.includes(v)){
+        if(!message.content.match(v)){
           continue;
         }
         Logger.warning("Scam").put(message.author.id)
