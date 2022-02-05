@@ -14,5 +14,6 @@
     "width": 600,
     "height": 300
   },
-  "scamTimeout": 3600000
+  "scamTimeout": 3600000,
+  "gameEventSticker": "896666606103568384"
 }

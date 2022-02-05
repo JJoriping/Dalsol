@@ -1,4 +1,4 @@
-import { Client, Guild } from "discord.js";
+import { Client, Guild, NewsChannel, Permissions, Snowflake, TextChannel } from "discord.js";
 import SETTINGS from "../data/settings.json";
 import { Logger } from "../utils/Logger";
 
@@ -6,11 +6,17 @@ const enum FooterStigma{
   GAME_ROLE = "게임 역할 받기"
 }
 
-export async function processTextRoleMaker(client:Client, guild:Guild):Promise<void>{
-  const roleChannel = await client.channels.fetch(SETTINGS.roleChannel);
-  if(!roleChannel?.isText()) throw Error(`Invalid roleChannel: ${SETTINGS.roleChannel}`);
-  await roleChannel.messages.fetch();
+const REGEXP_ROLE_MESSAGE = /^<@&(\d+)> 역할을 받고 싶다면/;
 
+export const channelRoleTable = new Map<Snowflake, {
+  'roleId': Snowflake,
+  'title': string
+}>();
+export async function processTextRoleMaker(client:Client, guild:Guild):Promise<void>{
+  const roleChannel = await guild.channels.fetch(SETTINGS.roleChannel);
+  if(!roleChannel?.isText()) throw Error(`Invalid roleChannel: ${SETTINGS.roleChannel}`);
+
+  await updateChannelRoleTable(guild, roleChannel);
   client.on('messageCreate', async message => {
     const chunk = message.content.match(/^생성 (.+) <@&(\d+)> ([0-9A-F]+)( [^\x00-\xFF]+| <.+>)?$/i);
     if(!chunk) return;
@@ -41,6 +47,7 @@ export async function processTextRoleMaker(client:Client, guild:Guild):Promise<v
     });
     await newMessage.react(emoji);
     await message.delete();
+    await updateChannelRoleTable(guild, roleChannel);
     Logger.info("New Role").put(role.name)
       .next("Emoji").put(emoji)
       .next("Channel").put(channel.id)
@@ -94,4 +101,26 @@ export async function processVoiceRoleMaker(client:Client, guild:Guild):Promise<
       await after.member?.roles.add(SETTINGS.voiceChannelParticipantRole, "음성 채널 입장");
     }
   });
+}
+async function updateChannelRoleTable(guild:Guild, roleChannel:NewsChannel|TextChannel):Promise<void>{
+  const channels = await guild.channels.fetch().then(list => (
+    list.filter(v => v.parentId === SETTINGS.roleCategory && v.id !== roleChannel.id)
+  ));
+  const messages = await roleChannel.messages.fetch();
+
+  channelRoleTable.clear();
+  for(const v of messages.values()){
+    if(!v.embeds[0]?.title) continue;
+    const chunk = v.embeds[0].description?.match(REGEXP_ROLE_MESSAGE);
+    if(!chunk) continue;
+    const channel = channels.find(w => (
+      w.permissionOverwrites.resolve(chunk[1])?.allow.has(Permissions.FLAGS.VIEW_CHANNEL) || false
+    ));
+    if(!channel) continue;
+
+    channelRoleTable.set(channel.id, {
+      roleId: chunk[1],
+      title: v.embeds[0].title
+    });
+  }
 }

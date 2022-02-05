@@ -2,6 +2,7 @@ import { Client, Intents } from "discord.js";
 import CREDENTIAL from "./data/credential.json";
 import SETTINGS from "./data/settings.json";
 import { processBotMessageChecker } from "./processors/BotMessageChecker";
+import { processGameEventMaker } from "./processors/GameEventMaker";
 import { processGuestInterviewer } from "./processors/GuestInterviewer";
 import { processMessageLogger } from "./processors/MessageLogger";
 import { processTextRoleMaker, processVoiceRoleMaker } from "./processors/RoleMaker";
@@ -22,13 +23,14 @@ const client = new Client({
 async function main():Promise<void>{
   client.once('ready', async () => {
     const guild = await client.guilds.fetch(SETTINGS.guild);
-    
+
     await processGuestInterviewer(client, guild);
     await processScamChecker(client, guild);
     await processBotMessageChecker(client, guild);
     await processTextRoleMaker(client, guild);
     await processMessageLogger(client, guild);
     await processVoiceRoleMaker(client, guild);
+    await processGameEventMaker(client, guild);
 
     Logger.success("Discord").put(client.user?.tag).out();
   });
