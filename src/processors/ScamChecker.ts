@@ -3,7 +3,7 @@ import SETTINGS from "../data/settings.json";
 import { Logger } from "../utils/Logger";
 
 const SCAM_TABLE = {
-  '허위 니트로 링크': /https:\/\/disc\w*de?\.gift\//
+  '허위 니트로 링크': /https?:\/\/dis[cords0]{3,5}e?\.gift\//
 };
 
 export async function processScamChecker(client:Client, guild:Guild):Promise<void>{
