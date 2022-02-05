@@ -1,5 +1,5 @@
 import SETTINGS from "../data/settings.json";
-import { Client, Guild } from "discord.js";
+import { Client, Guild, GuildScheduledEvent } from "discord.js";
 import { DateUnit } from "../enums/DateUnit";
 import { channelRoleTable } from "./RoleMaker";
 import { Logger } from "../utils/Logger";
@@ -26,6 +26,10 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
     if(!roleEntity){
       return;
     }
+    if(await getScheduledEvent(guild, message.author.username, 'SCHEDULED')){
+      await message.reply("이미 등록한 이벤트가 있어요.");
+      return;
+    }
     const question = await message.reply({
       embeds: [{
         title: "🎮 게임 이벤트 만들기 (1/2)",
@@ -43,6 +47,7 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
     });
     let startDate:Date;
     let voiceChannelId:string|undefined;
+    let useRoleMention = true;
     let description = "";
 
     // 시작 일시 정하기
@@ -79,15 +84,17 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
           color: 'YELLOW',
           description: [
             "아래 내용으로 이벤트를 만들 예정이에요.",
-            "> - 아무 내용으로 답장해서 이벤트에 설명을 추가할 수 있어요.",
-            "> - 음성 채널을 멘션해서 이벤트에 음성 채널을 연결할 수 있어요.",
-            "> - `확인`으로 답장하면 이벤트가 만들어져요.",
+            "> - 아무 내용으로 답장하면 이벤트에 설명을 추가할 수 있어요.",
+            "> - 음성 채널을 멘션해 답장하면 이벤트에 음성 채널을 연결할 수 있어요.",
+            "> - `확인`으로 답장: 이벤트가 만들어져요.",
+            `> - \`멘션\`으로 답장: 이벤트를 생성할 때 <@&${roleEntity.roleId}> 역할을 멘션할지를 결정해요.`,
             "> - 5분이 지나거나 `취소`를 입력하면 이벤트 만들기를 그만둬요.",
             "",
             "🗓️ __이벤트 정보__",
             `> 게임: **${roleEntity.title}**`,
             `> 일시: **${startDate.toLocaleString()}**`,
             `> 장소: ${voiceChannelId ? `<#${voiceChannelId}>` : "*(없음)*"}`,
+            `> 멘션: ${useRoleMention ? `<@&${roleEntity.roleId}> 역할을 멘션하면서 이벤트 생성` : "멘션하지 않고 이벤트 생성"}`,
             "📝 __이벤트 설명__",
             description ? `\`\`\`plain\n${description.replace(/`/g, "｀")}\`\`\`` : "*(없음)*"
           ].join('\n'),
@@ -112,18 +119,25 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
         await answer.delete();
         break;
       }
-      const voiceChannel = answer.mentions.channels.last();
-      if(voiceChannel && voiceChannel.isVoice()){
-        voiceChannelId = voiceChannel.id;
+      if(answer.content === "멘션"){
+        useRoleMention = !useRoleMention;
       }else{
-        description = answer.content;
+        const voiceChannel = answer.mentions.channels.last();
+        if(voiceChannel && voiceChannel.isVoice() && voiceChannel.guildId === message.guildId){
+          voiceChannelId = voiceChannel.id;
+        }else{
+          description = answer.content;
+        }
       }
       await answer.delete();
+    }
+    if(startDate.getTime() - Date.now() < DateUnit.MINUTE){
+      startDate = new Date(Date.now() + 3 * DateUnit.MINUTE);
     }
     const event = await guild.scheduledEvents.create({
       name: `${message.author.username} 님의 ${roleEntity.title}`,
       scheduledStartTime: startDate,
-      scheduledEndTime: voiceChannelId ? undefined : new Date(startDate.getTime() + DateUnit.HOUR),
+      scheduledEndTime: new Date(startDate.getTime() + DateUnit.HOUR),
       privacyLevel: "GUILD_ONLY",
       entityType: voiceChannelId ? "VOICE" : "EXTERNAL",
       description,
@@ -131,12 +145,22 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
       entityMetadata: voiceChannelId ? undefined : { location: message.url },
       reason: "게임 이벤트 만들기 기능 이용"
     });
+    const inviteURL = await event.createInviteURL({
+      maxAge: DateUnit.WEEK / DateUnit.SECOND,
+      unique: true,
+      channel: voiceChannelId ? undefined : SETTINGS.guestWelcomeChannel
+    });
     await question.reply({
-      content: `<@&${roleEntity.roleId}>\n${event.url}`,
+      content: useRoleMention ? `<@&${roleEntity.roleId}>\n${inviteURL}` : inviteURL,
       embeds: [{
         title: "🎮 게임 이벤트 만들기",
         color: 'YELLOW',
-        description: `<@${message.author.id}> 님이 이벤트를 만들었어요!`
+        description: [
+          `<@${message.author.id}> 님이 이벤트를 만들었어요!`,
+          "> 이벤트는 시작한지 1시간 뒤 자동으로 완료돼요. 그 전에 이 메시지에 `연장`으로 답장하면 1일 연장할 수 있어요.",
+          "> 이벤트가 끝났다면 `완료`로 답장해서 다른 분들이 실망하지 않도록 해 주세요!"
+        ].join('\n'),
+        footer: { text: "취소하려면 이 메시지에 `취소`로 답장해 주세요." }
       }]
     });
     await question.delete();
@@ -147,6 +171,86 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
       .out()
     ;
   });
+  client.on('messageCreate', async message => {
+    if(message.author.bot){
+      return;
+    }
+    if(!message.reference){
+      return;
+    }
+    const roleEntity = channelRoleTable.get(message.channelId);
+    if(!roleEntity){
+      return;
+    }
+    const reference = await message.fetchReference().catch(() => undefined);
+    if(reference?.embeds[0]?.title !== "🎮 게임 이벤트 만들기"){
+      return;
+    }
+    const chunk = reference.embeds[0].description?.match(/^<@(\d+)> 님이 이벤트를 만들었어요/);
+    if(chunk?.[1] !== message.author.id){
+      return;
+    }
+    switch(message.content){
+      case "완료":{
+        const event = await getScheduledEvent(guild, message.author.username, 'ACTIVE', roleEntity.title);
+        if(event){
+          await event.setStatus("COMPLETED");
+          await message.react("✅");
+        }else{
+          await message.react("⚠️");
+        }
+      } break;
+      case "연장":{
+        const event = await getScheduledEvent(guild, message.author.username, 'ACTIVE', roleEntity.title);
+        if(event){
+          await event.edit({ scheduledEndTime: new Date(Date.now() + DateUnit.DAY) });
+          await message.react("✅");
+        }else{
+          await message.react("⚠️");
+        }
+      } break;
+      case "취소":{
+        const event = await getScheduledEvent(guild, message.author.username, 'SCHEDULED', roleEntity.title);
+        if(event){
+          await event.delete();
+          await reference.edit({
+            content: `*(<@${message.author.id}> 님에 의해 취소된 이벤트입니다.)*`,
+            embeds: []
+          });
+          await message.react("✅");
+        }else{
+          await message.react("⚠️");
+        }
+      } break;
+    }
+  });
+  global.setInterval(async () => {
+    const now = Date.now();
+
+    for(const [ , v ] of await guild.scheduledEvents.fetch()){
+      switch(v.status){
+        case "SCHEDULED":
+          if(!v.scheduledStartTimestamp) continue;
+          if(now >= v.scheduledStartTimestamp){
+            await v.setStatus("ACTIVE");
+          }
+          break;
+        case "ACTIVE":
+          if(!v.scheduledEndTimestamp) continue;
+          if(now >= v.scheduledEndTimestamp){
+            await v.setStatus("COMPLETED");
+          }
+          break;
+        case "CANCELED":
+        case "COMPLETED":
+          if(!v.scheduledEndTimestamp) continue;
+          if(now >= v.scheduledEndTimestamp + DateUnit.WEEK){
+            await v.delete();
+          }
+          break;
+      }
+    }
+  }, DateUnit.MINUTE);
 }
 function parseDate(text:string):Date|null{
   if(text === "지금" || text === "바로"){
@@ -193,4 +297,10 @@ function parseDate(text:string):Date|null{
     }
   }
   return null;
+}
+function getScheduledEvent(guild:Guild, username:string, status:GuildScheduledEvent['status'], title?:string):Promise<GuildScheduledEvent|undefined>{
+  return guild.scheduledEvents.fetch().then(title
+    ? list => list.find(v => v.status === status && v.name === `${username} 님의 ${title}`)
+    : list => list.find(v => v.status === status && v.name.startsWith(`${username} 님의`))
+  );
 }
