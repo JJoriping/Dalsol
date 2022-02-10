@@ -18,6 +18,8 @@ export async function processTextRoleMaker(client:Client, guild:Guild):Promise<v
 
   await updateChannelRoleTable(guild, roleChannel);
   client.on('messageCreate', async message => {
+    if(message.channelId !== SETTINGS.roleChannel) return;
+    if(message.author.bot) return;
     const chunk = message.content.match(/^생성 (.+) <@&(\d+)> ([0-9A-F]+)( [^\x00-\xFF]+| <.+>)?$/i);
     if(!chunk) return;
     const name = chunk[1];
