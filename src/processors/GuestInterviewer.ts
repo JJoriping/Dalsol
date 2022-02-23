@@ -24,6 +24,9 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
       .next("Birth").put(member.user.createdAt.toLocaleString())
       .out()
     ;
+    if(member.user.bot){
+      return;
+    }
     if(!spamKicker.in(member)){
       return;
     }

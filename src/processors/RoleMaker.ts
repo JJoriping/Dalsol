@@ -10,6 +10,7 @@ const REGEXP_ROLE_MESSAGE = /^<@&(\d+)> 역할을 받고 싶다면/;
 
 export const channelRoleTable = new Map<Snowflake, {
   'roleId': Snowflake,
+  'messageId': Snowflake,
   'title': string
 }>();
 export async function processTextRoleMaker(client:Client, guild:Guild):Promise<void>{
@@ -122,6 +123,7 @@ async function updateChannelRoleTable(guild:Guild, roleChannel:NewsChannel|TextC
 
     channelRoleTable.set(channel.id, {
       roleId: chunk[1],
+      messageId: v.id,
       title: v.embeds[0].title
     });
   }

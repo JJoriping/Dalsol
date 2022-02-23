@@ -1,0 +1,1 @@
+processChannelActivityLogger에 의해 관리되는 채널별 활성도를 보관하는 폴더입니다.

@@ -2,6 +2,7 @@ import { Client, Intents } from "discord.js";
 import CREDENTIAL from "./data/credential.json";
 import SETTINGS from "./data/settings.json";
 import { processBotMessageChecker } from "./processors/BotMessageChecker";
+import { processChannelActivityLogger } from "./processors/ChannelActivityLogger";
 import { processGameEventMaker } from "./processors/GameEventMaker";
 import { processGuestInterviewer } from "./processors/GuestInterviewer";
 import { processMessageLogger } from "./processors/MessageLogger";
@@ -31,6 +32,7 @@ async function main():Promise<void>{
     await processMessageLogger(client, guild);
     await processVoiceRoleMaker(client, guild);
     await processGameEventMaker(client, guild);
+    await processChannelActivityLogger(client, guild);
 
     Logger.success("Discord").put(client.user?.tag).out();
   });
