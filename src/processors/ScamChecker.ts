@@ -15,13 +15,14 @@ const SCAM_TABLE = {
   'nitro': 6,
   'free': 2,
   'discord': 2,
-  'month': 1
+  'month': 1,
+  'subscription': 2
 };
 const SCAM_THRESHOLD = 10;
 
 export async function processScamChecker(client:Client, guild:Guild):Promise<void>{
   client.on('messageCreate', async message => {
-    if(message.author.bot){
+    if(message.channelId === SETTINGS.logChannel){
       return;
     }
     if(!message.embeds.length){

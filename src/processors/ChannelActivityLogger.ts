@@ -15,8 +15,8 @@ type ChannelActivityData = {
   }
 };
 const INACTIVATION_TERM = DateUnit.MONTH;
-const INCUBATOR_TERM = CLOTHES.development ? DateUnit.MINUTE : DateUnit.DAY;
-const SCORES_WINDOW = 7; // 최근 7일
+const INCUBATOR_TERM = CLOTHES.development ? DateUnit.MINUTE : 6 * DateUnit.HOUR;
+const SCORES_WINDOW = 28; // 최근 7일
 
 export async function processChannelActivityLogger(client:Client, guild:Guild):Promise<void>{
   const roleChannel = await guild.channels.fetch(SETTINGS.roleChannel);
