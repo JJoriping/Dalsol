@@ -14,7 +14,12 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
   const guestWelcomeChannel = await client.channels.fetch(SETTINGS.guestWelcomeChannel) as TextChannel;
   if(guestWelcomeChannel?.type !== "GUILD_TEXT") throw Error(`Invalid guestWelcomeChannel: ${SETTINGS.guestWelcomeChannel}`);
 
-  for(const v of (await guestWelcomeChannel.threads.fetch()).threads.values()){
+  for(const v of (await guestWelcomeChannel.threads.fetch({
+    archived: {
+      type: "private",
+      fetchAll: true
+    }
+  })).threads.values()){
     await v.delete("부팅 시 존재하는 스레드 삭제");
     await sleep(1);
   }
@@ -92,7 +97,6 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
       await member.roles.add(SETTINGS.regularRole);
     });
     collector.once('end', async () => {
-      if(!captchaTable.delete(member.id)) return;
       try{
         const channel = await member.createDM();
 
@@ -108,6 +112,7 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
         });
       }catch(e){}
       await member.kick("인증 시간 초과");
+      captchaTable.delete(member.id);
     });
   });
   client.on('guildMemberRemove', async member => {
