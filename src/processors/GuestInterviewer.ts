@@ -80,7 +80,6 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
         return;
       }
       captchaTable.delete(member.id);
-      collector.stop("인증 성공");
       await v.reply({
         embeds: [{
           title: "✨ 입장 완료!",
@@ -95,8 +94,12 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
         thread.delete("인증 성공");
       }, DateUnit.MINUTE);
       await member.roles.add(SETTINGS.regularRole);
+      collector.stop("인증 성공");
     });
     collector.once('end', async () => {
+      if(member.roles.resolve(SETTINGS.regularRole)){
+        return;
+      }
       try{
         const channel = await member.createDM();
 

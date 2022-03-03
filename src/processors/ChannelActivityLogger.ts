@@ -1,11 +1,11 @@
-import { Client, Guild, Permissions, Snowflake } from "discord.js";
+import { Client, Guild, Permissions, Snowflake, SnowflakeUtil } from "discord.js";
 import { existsSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
-import { CLOTHES } from "../utils/Clothes";
 import { Logger } from "../utils/Logger";
 import { schedule } from "../utils/System";
+import { orderBy } from "../utils/Utility";
 import { channelRoleTable } from "./RoleMaker";
 
 type ChannelActivityData = {
@@ -15,8 +15,9 @@ type ChannelActivityData = {
   }
 };
 const INACTIVATION_TERM = DateUnit.MONTH;
-const INCUBATOR_TERM = CLOTHES.development ? DateUnit.MINUTE : 6 * DateUnit.HOUR;
+const INCUBATOR_TERM = 6 * DateUnit.HOUR;
 const SCORES_WINDOW = 28; // 최근 7일
+const RANKING_EMOJI = [ "🥇", "🥈", "🥉" ];
 
 export async function processChannelActivityLogger(client:Client, guild:Guild):Promise<void>{
   const roleChannel = await guild.channels.fetch(SETTINGS.roleChannel);
@@ -32,6 +33,7 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
       continue;
     }
     const path = `res/channels/${v.id}.json`;
+    const baby:{ [key:Snowflake]: number } = {};
 
     if(!existsSync(path)){
       await writeFile(path, JSON.stringify({
@@ -39,7 +41,12 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
         users: {}
       } as ChannelActivityData));
     }
-    channelMessageIncubator.set(v.id, {});
+    for(const [ l, w ] of await v.messages.fetch({ after: SnowflakeUtil.generate(Date.now() - INCUBATOR_TERM) })){
+      if(w.author.bot) continue;
+      baby[l] = w.createdTimestamp;
+      messageAuthorTable[l] = w.author.id;
+    }
+    channelMessageIncubator.set(v.id, baby);
   }
   client.on('messageCreate', message => {
     if(message.author.bot) return;
@@ -59,6 +66,8 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
     const threshold = Date.now() - INCUBATOR_TERM;
     const histogram:{ [key:string]: number } = {};
     const logger = Logger.info("Activity Incubation");
+    const roleChannelMessages = await roleChannel.messages.fetch();
+    const grossScores:{ [key:string]: number } = {};
 
     // 활성도 계산
     for(const [ k, v ] of channelMessageIncubator.entries()){
@@ -90,6 +99,7 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
         logger.next(k).put(score);
       });
     }
+    logger.out();
     // 비활성 유저 정리
     await guild.members.fetch();
     for(const k of channelMessageIncubator.keys()){
@@ -97,7 +107,7 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
       if(!entity) continue;
       const role = await guild.roles.fetch(entity.roleId);
       if(!role) continue;
-      const message = await roleChannel.messages.fetch(entity.messageId);
+      const message = roleChannelMessages.get(entity.messageId);
       if(!message) continue;
       const now = Date.now();
 
@@ -118,7 +128,22 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
         }
       });
     }
-    logger.out();
+    // 활성도 현황 보고
+    for(const k of channelMessageIncubator.keys()){
+      await update(k, async ({ scores }) => {
+        grossScores[k] = getGrossActivityScore(scores);
+      });
+    }
+    await roleChannelMessages.find(v => v.embeds[0]?.footer?.text === "활성도 랭킹")?.delete();
+    await roleChannel.send({
+      embeds: [{
+        title: "🔥 달달소에서 요즘 뜨는 게임",
+        description: Object.entries(grossScores).sort(orderBy(e => e[1], true)).filter(e => e[1] > 0).slice(0, 5).map(([ k, v ], i) => (
+          `${RANKING_EMOJI[i] || (i + 1)} <#${k}>\n> ${Math.round(v).toLocaleString()}점`
+        )).join('\n') || "-",
+        footer: { text: "활성도 랭킹" }
+      }]
+    });
   }, INCUBATOR_TERM, {
     punctual: true
   });
@@ -130,6 +155,17 @@ function getActivityScore(histogram:{ [key:string]: number }):number{
     R += Math.log(1 + v);
   }
   return Math.log(Object.keys(histogram).length) * R;
+}
+function getGrossActivityScore(scores:number[]):number{
+  const list = [ ...scores ].sort(orderBy(v => v));
+
+  list.shift();
+  list.pop();
+
+  if(list.length < 1){
+    return 0;
+  }
+  return list.reduce((pv, v) => pv + v, 0);
 }
 async function update(channelId:string, modifier:(v:ChannelActivityData) => Promise<void>):Promise<void>{
   const path = `res/channels/${channelId}.json`;

@@ -8,6 +8,7 @@ import { processGuestInterviewer } from "./processors/GuestInterviewer";
 import { processMessageLogger } from "./processors/MessageLogger";
 import { processTextRoleMaker, processVoiceRoleMaker } from "./processors/RoleMaker";
 import { processScamChecker } from "./processors/ScamChecker";
+import { CLOTHES } from "./utils/Clothes";
 import { Logger } from "./utils/Logger";
 
 const client = new Client({
@@ -22,6 +23,9 @@ const client = new Client({
 });
 
 async function main():Promise<void>{
+  if(!CLOTHES.development){
+    await Logger.initialize("main");
+  }
   client.once('ready', async () => {
     const guild = await client.guilds.fetch(SETTINGS.guild);
 
