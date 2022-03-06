@@ -5,10 +5,12 @@ import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
 import { Logger } from "../utils/Logger";
 import { SpamKicker } from "../utils/SpamKicker";
+import { schedule } from "../utils/System";
 import { randInt, sleep } from "../utils/Utility";
 
 const captchaTable = new Map<string, [data:Captcha, channel:string, expired:number]>();
 const spamKicker = new SpamKicker();
+const REGULARIZATION_TERM = 10 * DateUnit.MINUTE;
 
 export async function processGuestInterviewer(client:Client, guild:Guild):Promise<void>{
   const guestWelcomeChannel = await client.channels.fetch(SETTINGS.guestWelcomeChannel) as TextChannel;
@@ -53,6 +55,8 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
       ]
     });
     const collector = thread.createMessageCollector({ time: DateUnit.HOUR });
+    const isYoung = Date.now() - member.user.createdTimestamp < SETTINGS.userAgeThreshold;
+    const timeBecomingAdult = isYoung && (member.user.createdTimestamp + SETTINGS.userAgeThreshold) / DateUnit.SECOND;
     let life = 5;
 
     collector.on('collect', async v => {
@@ -84,7 +88,10 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
         embeds: [{
           title: "✨ 입장 완료!",
           color: 'GREEN',
-          description: `협조해 주셔서 감사합니다! 즐거운 ${guild.name} 여행 되세요 😉`,
+          description: isYoung
+            ? `협조해 주셔서 감사합니다! 다만 사용하시는 디스코드 계정이 아직 새 것이라, 정식 <@&${SETTINGS.regularRole}> 역할을 받으려면 <t:${timeBecomingAdult}:F>까지 기다려야 해요.`
+            : `협조해 주셔서 감사합니다! 즐거운 ${guild.name} 여행 되세요 😉`
+          ,
           footer: {
             text: "이 스레드는 1분 뒤 삭제됩니다."
           }
@@ -93,11 +100,11 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
       global.setTimeout(() => {
         thread.delete("인증 성공");
       }, DateUnit.MINUTE);
-      await member.roles.add(SETTINGS.regularRole);
+      await member.roles.add(isYoung ? SETTINGS.associateRole : SETTINGS.regularRole);
       collector.stop("인증 성공");
     });
     collector.once('end', async () => {
-      if(member.roles.resolve(SETTINGS.regularRole)){
+      if(member.roles.cache.hasAny(SETTINGS.regularRole, SETTINGS.associateRole)){
         return;
       }
       try{
@@ -125,6 +132,24 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
     const channel = await guestWelcomeChannel.threads.fetch(chunk[1]);
     if(!channel) return;
     channel.delete("유저 퇴장");
+  });
+  schedule(async () => {
+    const associateRole = await guild.roles.fetch(SETTINGS.associateRole);
+    if(!associateRole){
+      throw Error(`Invalid associateRole: ${SETTINGS.associateRole}`);
+    }
+    const now = Date.now();
+
+    for(const v of associateRole.members.values()){
+      if(now - v.user.createdTimestamp < SETTINGS.userAgeThreshold){
+        continue;
+      }
+      await v.roles.remove(SETTINGS.associateRole, "정회원 시간 경과");
+      await v.roles.add(SETTINGS.regularRole, "정회원 시간 경과");
+      Logger.info("Regularization").put(v.id).next("Tag").put(v.user.tag).out();
+    }
+  }, REGULARIZATION_TERM, {
+    punctual: true
   });
 }
 async function registerCaptcha(userId:string, threadId:string):Promise<Buffer>{
