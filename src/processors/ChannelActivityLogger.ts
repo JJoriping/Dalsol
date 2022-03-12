@@ -18,6 +18,7 @@ const INACTIVATION_TERM = DateUnit.MONTH;
 const INCUBATOR_TERM = 6 * DateUnit.HOUR;
 const SCORES_WINDOW = 28; // 최근 7일
 const RANKING_EMOJI = [ "🥇", "🥈", "🥉" ];
+const MIN_CONTENT_LENGTH = 4;
 
 export async function processChannelActivityLogger(client:Client, guild:Guild):Promise<void>{
   const roleChannel = await guild.channels.fetch(SETTINGS.roleChannel);
@@ -50,6 +51,7 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
   }
   client.on('messageCreate', message => {
     if(message.author.bot) return;
+    if(message.content.length < MIN_CONTENT_LENGTH) return;
     const messages = channelMessageIncubator.get(message.channelId);
     if(!messages) return;
     messages[message.id] = message.createdTimestamp;

@@ -56,7 +56,7 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
     });
     const collector = thread.createMessageCollector({ time: DateUnit.HOUR });
     const isYoung = Date.now() - member.user.createdTimestamp < SETTINGS.userAgeThreshold;
-    const timeBecomingAdult = isYoung && (member.user.createdTimestamp + SETTINGS.userAgeThreshold) / DateUnit.SECOND;
+    const timeBecomingAdult = isYoung && Math.ceil((member.user.createdTimestamp + SETTINGS.userAgeThreshold) / DateUnit.SECOND);
     let life = 5;
 
     collector.on('collect', async v => {
