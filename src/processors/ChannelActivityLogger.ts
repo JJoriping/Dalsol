@@ -16,7 +16,7 @@ type ChannelActivityData = {
 };
 const INACTIVATION_TERM = DateUnit.MONTH;
 const INCUBATOR_TERM = 6 * DateUnit.HOUR;
-const SCORES_WINDOW = 28; // 최근 7일
+const SCORES_WINDOW = 12; // 최근 3일
 const RANKING_EMOJI = [ "🥇", "🥈", "🥉" ];
 const MIN_CONTENT_LENGTH = 4;
 
@@ -81,8 +81,7 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
           delete v[l];
         }
       }
-      if(incubatedMessages.length < 1) continue;
-      for(const v of incubatedMessages){
+      if(incubatedMessages.length > 0) for(const v of incubatedMessages){
         const author = messageAuthorTable[v];
   
         histogram[author] ??= 0;
@@ -92,7 +91,8 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
       await update(k, async w => {
         const score = getActivityScore(histogram);
 
-        if(w.scores.push(score) > SCORES_WINDOW){
+        w.scores.push(score);
+        while(w.scores.length > SCORES_WINDOW){
           w.scores.shift();
         }
         for(const l in histogram){
@@ -156,7 +156,7 @@ function getActivityScore(histogram:{ [key:string]: number }):number{
   for(const v of Object.values(histogram)){
     R += Math.log(1 + v);
   }
-  return Math.log(Object.keys(histogram).length) * R;
+  return Math.log(Object.keys(histogram).length) * R || 0;
 }
 function getGrossActivityScore(scores:number[]):number{
   const list = [ ...scores ].sort(orderBy(v => v));
