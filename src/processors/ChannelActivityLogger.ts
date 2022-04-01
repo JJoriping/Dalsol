@@ -66,13 +66,13 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
   });
   schedule(async () => {
     const threshold = Date.now() - INCUBATOR_TERM;
-    const histogram:{ [key:string]: number } = {};
     const logger = Logger.info("Activity Incubation");
     const roleChannelMessages = await roleChannel.messages.fetch();
     const grossScores:{ [key:string]: number } = {};
 
     // 활성도 계산
     for(const [ k, v ] of channelMessageIncubator.entries()){
+      const histogram:{ [key:string]: number } = {};
       const incubatedMessages:Snowflake[] = [];
 
       for(const l in v){
