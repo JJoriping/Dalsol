@@ -104,7 +104,9 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
       collector.stop("인증 성공");
     });
     collector.once('end', async () => {
-      if(member.roles.cache.hasAny(SETTINGS.regularRole, SETTINGS.associateRole)){
+      const { roles } = await member.fetch(true);
+      
+      if(roles.cache.hasAny(SETTINGS.regularRole, SETTINGS.associateRole)){
         return;
       }
       try{
