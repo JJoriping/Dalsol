@@ -35,6 +35,10 @@ export async function processTextRoleMaker(client:Client, guild:Guild):Promise<v
         {
           id: role.id,
           allow: [ 'VIEW_CHANNEL' ]
+        },
+        {
+          id: guild.roles.everyone,
+          deny: [ 'VIEW_CHANNEL' ]
         }
       ]
     });
@@ -56,6 +60,26 @@ export async function processTextRoleMaker(client:Client, guild:Guild):Promise<v
       .next("Channel").put(channel.id)
       .out()
     ;
+  });
+  client.on('messageCreate', async message => {
+    if(message.channelId !== SETTINGS.roleChannel) return;
+    if(message.author.bot) return;
+    const chunk = message.content.match(/^보관 <#(\d+)>$/i);
+    if(!chunk) return;
+    const roleEntity = channelRoleTable.get(chunk[1]);
+    if(!roleEntity) throw Error(`Invalid channel: ${chunk[1]}`);
+    const channel = await guild.channels.fetch(chunk[1]);
+    const role = await guild.roles.fetch(roleEntity.roleId);
+    const roleMessage = await roleChannel.messages.fetch(roleEntity.messageId);
+    
+    const reason = `${message.author.tag}의 보관 명령어 사용`;
+    
+    await channel?.setParent(SETTINGS.archivedRoleCategory, { reason });
+    await role?.delete(reason);
+    await roleMessage.delete();
+    await message.delete();
+
+    Logger.warning("Archived Role").put(roleEntity.title).out();
   });
   client.on('messageReactionAdd', async (reaction, user) => {
     if(reaction.message.channelId !== SETTINGS.roleChannel) return;
@@ -85,23 +109,6 @@ export async function processTextRoleMaker(client:Client, guild:Guild):Promise<v
 
         if(id === emoji) await member.roles.remove(role);
       } break;
-    }
-  });
-}
-export async function processVoiceRoleMaker(client:Client, guild:Guild):Promise<void>{
-  client.on('voiceStateUpdate', async (before, after) => {
-    if(before.channelId === after.channelId){
-      return;
-    }
-    Logger.info("Voice State").put(after.member?.id)
-      .next("Before").put(before.channelId)
-      .next("After").put(after.channelId)
-      .out()
-    ;
-    if(before.channelId && !after.channelId){
-      await after.member?.roles.remove(SETTINGS.voiceChannelParticipantRole, "음성 채널 퇴장");
-    }else if(!before.channelId && after.channelId){
-      await after.member?.roles.add(SETTINGS.voiceChannelParticipantRole, "음성 채널 입장");
     }
   });
 }

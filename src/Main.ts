@@ -5,7 +5,7 @@ import { processChannelActivityLogger } from "./processors/ChannelActivityLogger
 import { processGameEventMaker } from "./processors/GameEventMaker";
 import { processGuestInterviewer } from "./processors/GuestInterviewer";
 import { processMessageLogger } from "./processors/MessageLogger";
-import { processTextRoleMaker, processVoiceRoleMaker } from "./processors/RoleMaker";
+import { processTextRoleMaker } from "./processors/RoleMaker";
 import { processScamChecker } from "./processors/ScamChecker";
 import { CLOTHES } from "./utils/Clothes";
 import { Logger } from "./utils/Logger";
@@ -32,7 +32,6 @@ async function main():Promise<void>{
     await processScamChecker(client, guild);
     await processTextRoleMaker(client, guild);
     await processMessageLogger(client, guild);
-    await processVoiceRoleMaker(client, guild);
     await processGameEventMaker(client, guild);
     await processChannelActivityLogger(client, guild);
 

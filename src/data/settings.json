@@ -4,13 +4,13 @@
     "directory": "logs"
   },
   "guild": "809809541385682964",
+  "archivedRoleCategory": "970146500439076935",
   "roleCategory": "904930256299888680",
   "roleChannel": "904930579886243942",
   "logChannel": "822847252623392830",
   "guestWelcomeChannel": "923189241901633596",
   "regularRole": "923200636177219645",
   "associateRole": "949956355756810300",
-  "voiceChannelParticipantRole": "929005238990565376",
   "captcha": {
     "width": 600,
     "height": 300
