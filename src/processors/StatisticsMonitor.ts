@@ -1,0 +1,128 @@
+import { Client, Guild, MessageEditOptions, MessageOptions, MessagePayload, Snowflake } from "discord.js";
+import { DateUnit } from "../enums/DateUnit";
+import { schedule } from "../utils/System";
+import SETTINGS from "../data/settings.json";
+import { Logger } from "../utils/Logger";
+import { CLOTHES } from "../utils/Clothes";
+import { orderBy } from "../utils/Utility";
+import { RANKING_EMOJI } from "../utils/Text";
+
+const MONITOR_TERM = 5 * DateUnit.MINUTE;
+
+export async function processStatisticsMonitor(client:Client, guild:Guild):Promise<void>{
+  const usersChannel = await guild.channels.fetch(SETTINGS.statistics.usersChannel);
+  const messagesChannel = await guild.channels.fetch(SETTINGS.statistics.messagesChannel);
+  const userMessageList:Array<{
+    'userId': Snowflake,
+    'channelId': Snowflake,
+    'timestamp': number
+  }> = [];
+  if(usersChannel?.type !== 'GUILD_VOICE'){
+    throw Error("Invalid usersChannel");
+  }
+  if(messagesChannel?.type !== 'GUILD_VOICE'){
+    throw Error("Invalid messagesChannel");
+  }
+  const messagesChannelMessages = await messagesChannel.messages.fetch();
+  const textChannelRankingMessage = messagesChannelMessages.find(v => v.embeds[0].footer?.text === "채널별 메시지 랭킹")
+    || await messagesChannel.send(getTextChannelRankingMessagePayload())
+  ;
+  const textAuthorRankingMessage = messagesChannelMessages.find(v => v.embeds[0].footer?.text === "유저별 메시지 랭킹")
+    || await messagesChannel.send(getTextAuthorRankingMessagePayload())
+  ;
+  
+  client.on('messageCreate', async message => {
+    if(message.author.bot){
+      return;
+    }
+    userMessageList.push({
+      userId: message.author.id,
+      channelId: message.channelId,
+      timestamp: message.createdTimestamp
+    });
+  });
+  schedule(async () => {
+    pruneTimestampList(userMessageList);
+    const logger = Logger.info("Statistics");
+    const isYoung = process.uptime() < DateUnit.DAY / DateUnit.SECOND;
+
+    const regularRole = await guild.roles.fetch(SETTINGS.regularRole);
+    const associateRole = await guild.roles.fetch(SETTINGS.associateRole);
+    const members = await guild.members.fetch({ withPresences: true });
+
+    const regularUserCount = regularRole?.members.size;
+    const associateUserCount = associateRole?.members.size;
+    const userMessageCount = userMessageList.length;
+    const onlineUserCount = members.reduce((pv, v) => {
+      if(v.user.bot) return pv;
+      if(!v.presence || v.presence.status === 'offline') return pv;
+      return pv + 1;
+    }, 0);
+
+    if(regularUserCount){
+      let text = `👪・${regularRole.name}・${onlineUserCount.toLocaleString()}⟋${regularUserCount.toLocaleString()}`;
+
+      if(associateUserCount){
+        text += `+${associateUserCount.toLocaleString()}`;
+      }
+      await usersChannel.setName(text);
+      logger.next("Users").put(text);
+    }
+    {
+      let text = `💬・메시지・${userMessageCount?.toLocaleString()}⟋일`;
+
+      if(isYoung) text += " ⚠";
+      await messagesChannel.setName(text).catch(e => console.error(e));
+      logger.next("Messages").put(text);
+    }
+
+    await textChannelRankingMessage.edit(getTextChannelRankingMessagePayload());
+    await textAuthorRankingMessage.edit(getTextAuthorRankingMessagePayload());
+
+    logger.out();
+  }, MONITOR_TERM, {
+    punctual: true,
+    punctualOffset: 30 * DateUnit.SECOND,
+    callAtStart: CLOTHES.development
+  });
+
+  function pruneTimestampList(list:typeof userMessageList):void{
+    const threshold = Date.now() - DateUnit.DAY;
+    
+    for(let i = 0; i < list.length; i++){
+      if(list[i].timestamp < threshold){
+        continue;
+      }
+      list.splice(0, i);
+      break;
+    }
+  }
+  function getTextChannelRankingMessagePayload():MessageOptions&MessageEditOptions{
+    return {
+      embeds: [{
+        title: " 채널별 최근 24시간 메시지 수",
+        description: Object.entries(userMessageList.reduce<Record<Snowflake, number>>((pv, { channelId }) => {
+          pv[channelId] = (pv[channelId] || 0) + 1;
+          return pv;
+        }, {})).sort(orderBy(e => e[1], true)).map(([ k, v ], i) => (
+          `${RANKING_EMOJI[i] || (i + 1)} <#${k}>\n> ${v.toLocaleString()}개`
+        )).join('\n') || "-",
+        footer: { text: "채널별 메시지 랭킹" }
+      }]
+    };
+  }
+  function getTextAuthorRankingMessagePayload():MessageOptions&MessageEditOptions{
+    return {
+      embeds: [{
+        title: "🤗 유저별 최근 24시간 메시지 수",
+        description: Object.entries(userMessageList.reduce<Record<Snowflake, number>>((pv, { userId }) => {
+          pv[userId] = (pv[userId] || 0) + 1;
+          return pv;
+        }, {})).sort(orderBy(e => e[1], true)).map(([ k, v ], i) => (
+          `${RANKING_EMOJI[i] || (i + 1)} <@${k}>\n> ${v.toLocaleString()}개`
+        )).join('\n') || "-",
+        footer: { text: "유저별 메시지 랭킹" }
+      }]
+    };
+  }
+}

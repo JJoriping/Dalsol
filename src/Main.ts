@@ -7,6 +7,7 @@ import { processGuestInterviewer } from "./processors/GuestInterviewer";
 import { processMessageLogger } from "./processors/MessageLogger";
 import { processTextRoleMaker } from "./processors/RoleMaker";
 import { processScamChecker } from "./processors/ScamChecker";
+import { processStatisticsMonitor } from "./processors/StatisticsMonitor";
 import { CLOTHES } from "./utils/Clothes";
 import { Logger } from "./utils/Logger";
 
@@ -16,7 +17,8 @@ const client = new Client({
     Intents.FLAGS.GUILD_MEMBERS,
     Intents.FLAGS.GUILD_MESSAGES,
     Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-    Intents.FLAGS.GUILD_VOICE_STATES
+    Intents.FLAGS.GUILD_VOICE_STATES,
+    Intents.FLAGS.GUILD_PRESENCES
   ],
   retryLimit: 3
 });
@@ -34,8 +36,14 @@ async function main():Promise<void>{
     await processMessageLogger(client, guild);
     await processGameEventMaker(client, guild);
     await processChannelActivityLogger(client, guild);
+    await processStatisticsMonitor(client, guild);
 
     Logger.success("Discord").put(client.user?.tag).out();
+  });
+  client.on('debug', e => {
+    if(e.startsWith("Hit a 429")){
+      Logger.warning("Rate Limit").put(e).out();
+    }
   });
   await client.login(CREDENTIAL.token);
 }

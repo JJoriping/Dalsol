@@ -5,6 +5,7 @@ import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
 import { Logger } from "../utils/Logger";
 import { schedule } from "../utils/System";
+import { RANKING_EMOJI } from "../utils/Text";
 import { orderBy } from "../utils/Utility";
 import { channelRoleTable } from "./RoleMaker";
 
@@ -17,7 +18,6 @@ type ChannelActivityData = {
 const INACTIVATION_TERM = DateUnit.MONTH;
 const INCUBATOR_TERM = 6 * DateUnit.HOUR;
 const SCORES_WINDOW = 12; // 최근 3일
-const RANKING_EMOJI = [ "🥇", "🥈", "🥉" ];
 const MIN_CONTENT_LENGTH = 4;
 
 export async function processChannelActivityLogger(client:Client, guild:Guild):Promise<void>{

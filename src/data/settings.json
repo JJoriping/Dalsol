@@ -17,5 +17,9 @@
   },
   "scamTimeout": 3600000,
   "userAgeThreshold": 2592000000,
-  "gameEventSticker": "896666606103568384"
+  "gameEventSticker": "896666606103568384",
+  "statistics": {
+    "usersChannel": "984086482782412820",
+    "messagesChannel": "984094304416985118"
+  }
 }
