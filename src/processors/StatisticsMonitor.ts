@@ -7,7 +7,7 @@ import { CLOTHES } from "../utils/Clothes";
 import { orderBy } from "../utils/Utility";
 import { RANKING_EMOJI } from "../utils/Text";
 
-const MONITOR_TERM = 5 * DateUnit.MINUTE;
+const MONITOR_TERM = 10 * DateUnit.MINUTE;
 
 export async function processStatisticsMonitor(client:Client, guild:Guild):Promise<void>{
   const usersChannel = await guild.channels.fetch(SETTINGS.statistics.usersChannel);
@@ -104,7 +104,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
         description: Object.entries(userMessageList.reduce<Record<Snowflake, number>>((pv, { channelId }) => {
           pv[channelId] = (pv[channelId] || 0) + 1;
           return pv;
-        }, {})).sort(orderBy(e => e[1], true)).map(([ k, v ], i) => (
+        }, {})).sort(orderBy(e => e[1], true)).slice(0, 20).map(([ k, v ], i) => (
           `${RANKING_EMOJI[i] || (i + 1)} <#${k}>\n> ${v.toLocaleString()}개`
         )).join('\n') || "-",
         footer: { text: "채널별 메시지 랭킹" }
@@ -118,7 +118,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
         description: Object.entries(userMessageList.reduce<Record<Snowflake, number>>((pv, { userId }) => {
           pv[userId] = (pv[userId] || 0) + 1;
           return pv;
-        }, {})).sort(orderBy(e => e[1], true)).map(([ k, v ], i) => (
+        }, {})).sort(orderBy(e => e[1], true)).slice(0, 20).map(([ k, v ], i) => (
           `${RANKING_EMOJI[i] || (i + 1)} <@${k}>\n> ${v.toLocaleString()}개`
         )).join('\n') || "-",
         footer: { text: "유저별 메시지 랭킹" }
