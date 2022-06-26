@@ -6,7 +6,8 @@ const SCAM_WHITELISTS = [
   /https?:\/\/(\w+\.)?discord\.(com|gift)/,
   /https?:\/\/(\w+\.)?youtube\.com/,
   /https?:\/\/youtu\.be/,
-  /https?:\/\/(\w+\.)?epicgames\.com/
+  /https?:\/\/(\w+\.)?epicgames\.com/,
+  /https?:\/\/medal\.tv/
 ];
 const SCAM_TABLE = {
   '$korean': -4,
