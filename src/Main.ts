@@ -34,8 +34,6 @@ async function main():Promise<void>{
     const guild = await client.guilds.fetch(SETTINGS.guild);
 
     await processGeekNewsReader(client, guild);
-    return;
-
     await processGuestInterviewer(client, guild);
     await processScamChecker(client, guild);
     await processTextRoleMaker(client, guild);
