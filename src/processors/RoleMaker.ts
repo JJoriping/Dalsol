@@ -1,4 +1,4 @@
-import { Client, Guild, NewsChannel, Permissions, Snowflake, TextChannel } from "discord.js";
+import { ChannelType, Client, Guild, NewsChannel, PermissionFlagsBits, Snowflake, TextBasedChannel, TextChannel, VoiceChannel } from "discord.js";
 import SETTINGS from "../data/settings.json";
 import { Logger } from "../utils/Logger";
 
@@ -15,7 +15,7 @@ export const channelRoleTable = new Map<Snowflake, {
 }>();
 export async function processTextRoleMaker(client:Client, guild:Guild):Promise<void>{
   const roleChannel = await guild.channels.fetch(SETTINGS.roleChannel);
-  if(!roleChannel?.isText()) throw Error(`Invalid roleChannel: ${SETTINGS.roleChannel}`);
+  if(!roleChannel?.isTextBased()) throw Error(`Invalid roleChannel: ${SETTINGS.roleChannel}`);
 
   await updateChannelRoleTable(guild, roleChannel);
   client.on('messageCreate', async message => {
@@ -28,17 +28,18 @@ export async function processTextRoleMaker(client:Client, guild:Guild):Promise<v
     const emoji = chunk[4]?.trim() || "✅";
     const role = await guild.roles.fetch(chunk[2]);
     if(!role) throw Error(`Invalid role: ${chunk[2]}`);
-    const channel = await guild.channels.create(name, {
-      type: 'GUILD_TEXT',
+    const channel = await guild.channels.create({
+      type: ChannelType.GuildText,
+      name,
       parent: SETTINGS.roleCategory,
       permissionOverwrites: [
         {
           id: role.id,
-          allow: [ 'VIEW_CHANNEL' ]
+          allow: [ 'ViewChannel' ]
         },
         {
           id: guild.roles.everyone,
-          deny: [ 'VIEW_CHANNEL' ]
+          deny: [ 'ViewChannel' ]
         }
       ]
     });
@@ -69,12 +70,13 @@ export async function processTextRoleMaker(client:Client, guild:Guild):Promise<v
     const roleEntity = channelRoleTable.get(chunk[1]);
     if(!roleEntity) throw Error(`Invalid channel: ${chunk[1]}`);
     const channel = await guild.channels.fetch(chunk[1]);
+    if(channel?.type !== ChannelType.GuildText) throw Error(`Invalid channel: ${chunk[1]}`);
     const role = await guild.roles.fetch(roleEntity.roleId);
     const roleMessage = await roleChannel.messages.fetch(roleEntity.messageId);
     
     const reason = `${message.author.tag}의 보관 명령어 사용`;
     
-    await channel?.setParent(SETTINGS.archivedRoleCategory, { reason });
+    await channel.setParent(SETTINGS.archivedRoleCategory, { reason });
     await role?.delete(reason);
     await roleMessage.delete();
     await message.delete();
@@ -112,9 +114,9 @@ export async function processTextRoleMaker(client:Client, guild:Guild):Promise<v
     }
   });
 }
-async function updateChannelRoleTable(guild:Guild, roleChannel:NewsChannel|TextChannel):Promise<void>{
+async function updateChannelRoleTable(guild:Guild, roleChannel:TextBasedChannel):Promise<void>{
   const channels = await guild.channels.fetch().then(list => (
-    list.filter(v => v.parentId === SETTINGS.roleCategory && v.id !== roleChannel.id)
+    list.filter(v => v !== null && v.parentId === SETTINGS.roleCategory && v.id !== roleChannel.id)
   ));
   const messages = await roleChannel.messages.fetch();
 
@@ -124,7 +126,7 @@ async function updateChannelRoleTable(guild:Guild, roleChannel:NewsChannel|TextC
     const chunk = v.embeds[0].description?.match(REGEXP_ROLE_MESSAGE);
     if(!chunk) continue;
     const channel = channels.find(w => (
-      w.permissionOverwrites.resolve(chunk[1])?.allow.has(Permissions.FLAGS.VIEW_CHANNEL) || false
+      w?.permissionOverwrites.resolve(chunk[1])?.allow.has(PermissionFlagsBits.ViewChannel) || false
     ));
     if(!channel) continue;
 

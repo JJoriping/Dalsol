@@ -1,6 +1,6 @@
-import { Message, MessageEmbedOptions, PartialMessage } from "discord.js";
+import { APIEmbed, Message, PartialMessage } from "discord.js";
 
-export async function getEmbedMessage(data:Message|PartialMessage):Promise<MessageEmbedOptions>{
+export async function getEmbedMessage(data:Message|PartialMessage):Promise<APIEmbed>{
   const message = data.partial ? await data.fetch() : data;
   const thumbnail = message.attachments.toJSON()[0];
   const descriptions = [
@@ -13,7 +13,7 @@ export async function getEmbedMessage(data:Message|PartialMessage):Promise<Messa
     description: descriptions.join('\n'),
     image: thumbnail?.contentType?.startsWith("image/") ? {
       url: thumbnail.url,
-      proxyURL: thumbnail.proxyURL
+      proxy_url: thumbnail.proxyURL
     } : undefined
   };
 }

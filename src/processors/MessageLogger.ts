@@ -1,4 +1,4 @@
-import { Client, Guild } from "discord.js";
+import { Client, Colors, Guild } from "discord.js";
 import { getBasePreset } from "../components/BasePreset";
 import { getEmbedMessage } from "../components/EmbedMessage";
 import SETTINGS from "../data/settings.json";
@@ -7,13 +7,13 @@ import { checkEmbeds } from "./ScamChecker";
 
 export async function processMessageLogger(client:Client, guild:Guild):Promise<void>{
   const logChannel = await client.channels.fetch(SETTINGS.logChannel);
-  if(!logChannel?.isText()) throw Error(`Invalid logChannel: ${SETTINGS.logChannel}`);
+  if(!logChannel?.isTextBased()) throw Error(`Invalid logChannel: ${SETTINGS.logChannel}`);
 
   client.on('messageUpdate', async (before, after) => {
     if(before.author?.bot){
       return;
     }
-    const data = getBasePreset("✏️ 메시지 수정", 'YELLOW', before);
+    const data = getBasePreset("✏️ 메시지 수정", Colors.Yellow, before);
 
     data.embeds![0].description = `메시지 번호: ${before.id} [이동](https://discord.com/channels/${before.guildId}/${before.channelId}/${before.id})`;
     data.embeds!.push(
@@ -29,7 +29,7 @@ export async function processMessageLogger(client:Client, guild:Guild):Promise<v
     if(message.author?.bot){
       return;
     }
-    const data = getBasePreset("🗑 메시지 삭제", 'RED', message);
+    const data = getBasePreset("🗑 메시지 삭제", Colors.Red, message);
 
     data.embeds![0].description = `메시지 번호: ${message.id}`;
     data.embeds!.push(

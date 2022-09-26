@@ -1,8 +1,8 @@
+import { ChannelType, Client, Colors, Guild, GuildScheduledEvent, GuildScheduledEventEntityType, GuildScheduledEventPrivacyLevel, GuildScheduledEventStatus } from "discord.js";
 import SETTINGS from "../data/settings.json";
-import { Client, Guild, GuildScheduledEvent } from "discord.js";
 import { DateUnit } from "../enums/DateUnit";
-import { channelRoleTable } from "./RoleMaker";
 import { Logger } from "../utils/Logger";
+import { channelRoleTable } from "./RoleMaker";
 
 const REGEXP_DATE_RELATIVE = /^(\d+)\s*(초|분|시간)\s*(?:후|뒤)에?$/;
 const REGEXP_DATE_ABSOLUTE = /^(오전|오후)?\s*(\d+)시\s*(반|\d+분)?$/;
@@ -13,7 +13,7 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
     if(message.author.bot){
       return;
     }
-    if(message.channel.type !== 'GUILD_TEXT'){
+    if(message.channel.type !== ChannelType.GuildText){
       return;
     }
     if(message.channel.parentId !== SETTINGS.roleCategory){
@@ -26,14 +26,14 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
     if(!roleEntity){
       return;
     }
-    if(await getScheduledEvent(guild, message.author.username, 'SCHEDULED')){
+    if(await getScheduledEvent(guild, message.author.username, GuildScheduledEventStatus.Scheduled)){
       await message.reply("이미 등록한 이벤트가 있어요.");
       return;
     }
     const question = await message.reply({
       embeds: [{
         title: "🎮 게임 이벤트 만들기 (1/2)",
-        color: 'YELLOW',
+        color: Colors.Yellow,
         description: [
           "게임을 언제 하실 예정이신가요?",
           "아래 양식을 참고해서 이 메시지에 **답장**해 주세요!",
@@ -81,7 +81,7 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
       await question.edit({
         embeds: [{
           title: "🎮 게임 이벤트 만들기 (2/2)",
-          color: 'YELLOW',
+          color: Colors.Yellow,
           description: [
             "아래 내용으로 이벤트를 만들 예정이에요.",
             "> - 아무 내용으로 답장하면 이벤트에 설명을 추가할 수 있어요.",
@@ -123,7 +123,7 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
         useRoleMention = !useRoleMention;
       }else{
         const voiceChannel = answer.mentions.channels.last();
-        if(voiceChannel && voiceChannel.isVoice() && voiceChannel.guildId === message.guildId){
+        if(voiceChannel && voiceChannel.isVoiceBased() && voiceChannel.guildId === message.guildId){
           voiceChannelId = voiceChannel.id;
         }else{
           description = answer.content;
@@ -138,8 +138,8 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
       name: `${message.author.username} 님의 ${roleEntity.title}`,
       scheduledStartTime: startDate,
       scheduledEndTime: new Date(startDate.getTime() + DateUnit.HOUR),
-      privacyLevel: "GUILD_ONLY",
-      entityType: voiceChannelId ? "VOICE" : "EXTERNAL",
+      privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
+      entityType: voiceChannelId ? GuildScheduledEventEntityType.Voice : GuildScheduledEventEntityType.External,
       description,
       channel: voiceChannelId,
       entityMetadata: voiceChannelId ? undefined : { location: message.url },
@@ -154,7 +154,7 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
       content: useRoleMention ? `<@&${roleEntity.roleId}>\n${inviteURL}` : inviteURL,
       embeds: [{
         title: "🎮 게임 이벤트 만들기",
-        color: 'YELLOW',
+        color: Colors.Yellow,
         description: [
           `<@${message.author.id}> 님이 이벤트를 만들었어요!`,
           "> 이벤트는 시작한지 1시간 뒤 자동으로 완료돼요. 그 전에 이 메시지에 `연장`으로 답장하면 1일 연장할 수 있어요.",
@@ -192,16 +192,16 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
     }
     switch(message.content){
       case "완료":{
-        const event = await getScheduledEvent(guild, message.author.username, 'ACTIVE', roleEntity.title);
+        const event = await getScheduledEvent(guild, message.author.username, GuildScheduledEventStatus.Active, roleEntity.title);
         if(event){
-          await event.setStatus("COMPLETED");
+          await event.setStatus(GuildScheduledEventStatus.Completed);
           await message.react("✅");
         }else{
           await message.react("⚠️");
         }
       } break;
       case "연장":{
-        const event = await getScheduledEvent(guild, message.author.username, 'ACTIVE', roleEntity.title);
+        const event = await getScheduledEvent(guild, message.author.username, GuildScheduledEventStatus.Active, roleEntity.title);
         if(event){
           await event.edit({ scheduledEndTime: new Date(Date.now() + DateUnit.DAY) });
           await message.react("✅");
@@ -210,7 +210,7 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
         }
       } break;
       case "취소":{
-        const event = await getScheduledEvent(guild, message.author.username, 'SCHEDULED', roleEntity.title);
+        const event = await getScheduledEvent(guild, message.author.username, GuildScheduledEventStatus.Scheduled, roleEntity.title);
         if(event){
           await event.delete();
           await reference.edit({
@@ -229,20 +229,20 @@ export async function processGameEventMaker(client:Client, guild:Guild):Promise<
 
     for(const [ , v ] of await guild.scheduledEvents.fetch()){
       switch(v.status){
-        case "SCHEDULED":
+        case GuildScheduledEventStatus.Scheduled:
           if(!v.scheduledStartTimestamp) continue;
           if(now >= v.scheduledStartTimestamp){
-            await v.setStatus("ACTIVE");
+            await v.setStatus(GuildScheduledEventStatus.Active);
           }
           break;
-        case "ACTIVE":
+        case GuildScheduledEventStatus.Active:
           if(!v.scheduledEndTimestamp) continue;
           if(now >= v.scheduledEndTimestamp){
-            await v.setStatus("COMPLETED");
+            await v.setStatus(GuildScheduledEventStatus.Completed);
           }
           break;
-        case "CANCELED":
-        case "COMPLETED":
+        case GuildScheduledEventStatus.Canceled:
+        case GuildScheduledEventStatus.Completed:
           if(!v.scheduledEndTimestamp) continue;
           if(now >= v.scheduledEndTimestamp + DateUnit.WEEK){
             await v.delete();

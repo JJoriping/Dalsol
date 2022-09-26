@@ -1,11 +1,11 @@
-import { Client, Guild, MessageEditOptions, MessageOptions, MessagePayload, Snowflake } from "discord.js";
-import { DateUnit } from "../enums/DateUnit";
-import { schedule } from "../utils/System";
+import { ChannelType, Client, Guild, MessageEditOptions, BaseMessageOptions, Snowflake } from "discord.js";
 import SETTINGS from "../data/settings.json";
-import { Logger } from "../utils/Logger";
+import { DateUnit } from "../enums/DateUnit";
 import { CLOTHES } from "../utils/Clothes";
-import { orderBy } from "../utils/Utility";
+import { Logger } from "../utils/Logger";
+import { schedule } from "../utils/System";
 import { RANKING_EMOJI } from "../utils/Text";
+import { orderBy } from "../utils/Utility";
 
 const MONITOR_TERM = 10 * DateUnit.MINUTE;
 
@@ -17,10 +17,10 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
     'channelId': Snowflake,
     'timestamp': number
   }> = [];
-  if(usersChannel?.type !== 'GUILD_VOICE'){
+  if(usersChannel?.type !== ChannelType.GuildVoice){
     throw Error("Invalid usersChannel");
   }
-  if(messagesChannel?.type !== 'GUILD_VOICE'){
+  if(messagesChannel?.type !== ChannelType.GuildVoice){
     throw Error("Invalid messagesChannel");
   }
   const messagesChannelMessages = await messagesChannel.messages.fetch();
@@ -97,7 +97,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       break;
     }
   }
-  function getTextChannelRankingMessagePayload():MessageOptions&MessageEditOptions{
+  function getTextChannelRankingMessagePayload():BaseMessageOptions&MessageEditOptions{
     return {
       embeds: [{
         title: " 채널별 최근 24시간 메시지 수",
@@ -111,7 +111,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       }]
     };
   }
-  function getTextAuthorRankingMessagePayload():MessageOptions&MessageEditOptions{
+  function getTextAuthorRankingMessagePayload():BaseMessageOptions&MessageEditOptions{
     return {
       embeds: [{
         title: "🤗 유저별 최근 24시간 메시지 수",

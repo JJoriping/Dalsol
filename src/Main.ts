@@ -1,8 +1,9 @@
-import { Client, Intents } from "discord.js";
+import { Client, IntentsBitField } from "discord.js";
 import CREDENTIAL from "./data/credential.json";
 import SETTINGS from "./data/settings.json";
 import { processChannelActivityLogger } from "./processors/ChannelActivityLogger";
 import { processGameEventMaker } from "./processors/GameEventMaker";
+import { processGeekNewsReader } from "./processors/GeekNewsReader";
 import { processGuestInterviewer } from "./processors/GuestInterviewer";
 import { processMessageLogger } from "./processors/MessageLogger";
 import { processTextRoleMaker } from "./processors/RoleMaker";
@@ -13,14 +14,16 @@ import { Logger } from "./utils/Logger";
 
 const client = new Client({
   intents: [
-    Intents.FLAGS.GUILDS,
-    Intents.FLAGS.GUILD_MEMBERS,
-    Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.GUILD_MESSAGE_REACTIONS,
-    Intents.FLAGS.GUILD_VOICE_STATES,
-    Intents.FLAGS.GUILD_PRESENCES
+    IntentsBitField.Flags.Guilds,
+    IntentsBitField.Flags.GuildMembers,
+    IntentsBitField.Flags.GuildMessages,
+    IntentsBitField.Flags.GuildMessageReactions,
+    IntentsBitField.Flags.GuildVoiceStates,
+    IntentsBitField.Flags.GuildPresences
   ],
-  retryLimit: 3
+  rest: {
+    retries: 3
+  }
 });
 
 async function main():Promise<void>{
@@ -29,6 +32,9 @@ async function main():Promise<void>{
   }
   client.once('ready', async () => {
     const guild = await client.guilds.fetch(SETTINGS.guild);
+
+    await processGeekNewsReader(client, guild);
+    return;
 
     await processGuestInterviewer(client, guild);
     await processScamChecker(client, guild);

@@ -1,4 +1,4 @@
-import { GuildMember } from "discord.js";
+import { Colors, GuildMember } from "discord.js";
 import CREDENTIAL from "../data/credential.json";
 import { DateUnit } from "../enums/DateUnit";
 import { Logger } from "./Logger";
@@ -93,7 +93,7 @@ export class SpamKicker{
       await channel.send({
         embeds: [{
           title: "입장 제한 모드",
-          color: 'ORANGE',
+          color: Colors.Orange,
           description: (banned ? [
             "지속적으로 입장을 시도해 차단되었습니다.",
             `문의: ${CREDENTIAL.protectModeContact}`
@@ -111,7 +111,7 @@ export class SpamKicker{
     ;
     if(banned){
       await member.ban({
-        days: 3,
+        deleteMessageDays: 3,
         reason: "입장 제한 모드에서 지속적인 접근 시도"
       });
     }else{

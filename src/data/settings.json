@@ -17,9 +17,12 @@
   },
   "scamTimeout": 3600000,
   "userAgeThreshold": 2592000000,
-  "gameEventSticker": "896666606103568384",
+  "gameEventSticker": "1003811572281516082",
   "statistics": {
     "usersChannel": "984086482782412820",
     "messagesChannel": "984094304416985118"
-  }
+  },
+  "geekNewsRSS": "http://feeds.feedburner.com/geeknews-feed",
+  "geekNewsForumChannel": "1019755965303763016",
+  "geekNewsForumTag": "1019929494296997978"
 }

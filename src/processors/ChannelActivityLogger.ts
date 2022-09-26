@@ -1,4 +1,4 @@
-import { Client, Guild, Permissions, Snowflake, SnowflakeUtil } from "discord.js";
+import { Client, Guild, PermissionFlagsBits, Snowflake, SnowflakeUtil } from "discord.js";
 import { existsSync } from "fs";
 import { readFile, writeFile } from "fs/promises";
 import SETTINGS from "../data/settings.json";
@@ -22,15 +22,15 @@ const MIN_CONTENT_LENGTH = 4;
 
 export async function processChannelActivityLogger(client:Client, guild:Guild):Promise<void>{
   const roleChannel = await guild.channels.fetch(SETTINGS.roleChannel);
-  if(!roleChannel?.isText()) throw Error(`Invalid roleChannel: ${SETTINGS.roleChannel}`);
+  if(!roleChannel?.isTextBased()) throw Error(`Invalid roleChannel: ${SETTINGS.roleChannel}`);
   const channels = (await guild.channels.fetch()).filter(v => (
-    !v.permissionsFor(SETTINGS.regularRole)?.has(Permissions.FLAGS.VIEW_CHANNEL) && v.parentId === SETTINGS.roleCategory
+    v !== null && !v.permissionsFor(SETTINGS.regularRole)?.has(PermissionFlagsBits.ViewChannel) && v.parentId === SETTINGS.roleCategory
   )).toJSON();
   const channelMessageIncubator = new Map<Snowflake, { [key:Snowflake]: number }>();
   const messageAuthorTable:{ [key:Snowflake]: Snowflake } = {};
 
   for(const v of channels){
-    if(!v.isText()){
+    if(!v?.isTextBased()){
       continue;
     }
     const path = `res/channels/${v.id}.json`;
@@ -42,7 +42,9 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
         users: {}
       } as ChannelActivityData));
     }
-    for(const [ l, w ] of await v.messages.fetch({ after: SnowflakeUtil.generate(Date.now() - INCUBATOR_TERM) })){
+    for(const [ l, w ] of await v.messages.fetch({
+      after: SnowflakeUtil.generate({ timestamp: Date.now() - INCUBATOR_TERM }).toString()
+    })){
       if(w.author.bot) continue;
       baby[l] = w.createdTimestamp;
       messageAuthorTable[l] = w.author.id;

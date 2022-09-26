@@ -1,5 +1,5 @@
 import { Captcha } from "captcha-canvas";
-import { Client, Guild, MessageAttachment, TextChannel } from "discord.js";
+import { AttachmentBuilder, ChannelType, Client, Colors, Guild, TextChannel } from "discord.js";
 import randomColor from "randomcolor";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
@@ -14,7 +14,7 @@ const REGULARIZATION_TERM = 10 * DateUnit.MINUTE;
 
 export async function processGuestInterviewer(client:Client, guild:Guild):Promise<void>{
   const guestWelcomeChannel = await client.channels.fetch(SETTINGS.guestWelcomeChannel) as TextChannel;
-  if(guestWelcomeChannel?.type !== "GUILD_TEXT") throw Error(`Invalid guestWelcomeChannel: ${SETTINGS.guestWelcomeChannel}`);
+  if(guestWelcomeChannel?.type !== ChannelType.GuildText) throw Error(`Invalid guestWelcomeChannel: ${SETTINGS.guestWelcomeChannel}`);
 
   for(const v of (await guestWelcomeChannel.threads.fetch({
     archived: {
@@ -39,7 +39,7 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
     }
     const thread = await guestWelcomeChannel.threads.create({
       name: `${member.user.username} 님의 스레드`,
-      type: 'GUILD_PRIVATE_THREAD', // 부스트 2단계 이상이어야 한다.
+      type: ChannelType.PrivateThread, // 부스트 2단계 이상이어야 한다.
       autoArchiveDuration: 60,
       reason: `${member.user.tag} 님에 대한 멤버십 심사`,
       invitable: false
@@ -51,7 +51,7 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
         "준비가 되셨다면 제가 보내 드린 그림에서 선이 이어진 6글자(대문자와 숫자 조합)를 입력해 주세요."
       ].join('\n'),
       files: [
-        new MessageAttachment(await registerCaptcha(member.id, thread.id), "captcha.png")
+        new AttachmentBuilder(await registerCaptcha(member.id, thread.id), { name: "captcha.png" }).attachment
       ]
     });
     const collector = thread.createMessageCollector({ time: DateUnit.HOUR });
@@ -78,7 +78,7 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
         message = await thread.send({
           content: "다시 시도해 주세요!",
           files: [
-            new MessageAttachment(await registerCaptcha(member.id, thread.id), "captcha.png")
+            new AttachmentBuilder(await registerCaptcha(member.id, thread.id), { name: "captcha.png" }).attachment
           ]
         });
         return;
@@ -87,7 +87,7 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
       await v.reply({
         embeds: [{
           title: "✨ 입장 완료!",
-          color: 'GREEN',
+          color: Colors.Green,
           description: isYoung
             ? `협조해 주셔서 감사합니다! 다만 사용하시는 디스코드 계정이 아직 새 것이라, 정식 <@&${SETTINGS.regularRole}> 역할을 받으려면 <t:${timeBecomingAdult}:F>까지 기다려야 해요.`
             : `협조해 주셔서 감사합니다! 즐거운 ${guild.name} 여행 되세요 😉`
@@ -115,7 +115,7 @@ export async function processGuestInterviewer(client:Client, guild:Guild):Promis
         await channel.send({
           embeds: [{
             title: "시간 초과",
-            color: 'ORANGE',
+            color: Colors.Orange,
             description: [
               `인증을 기한 내에 받지 않아 ${member.guild.name} 서버에서 추방되었어요.`,
               "다시 인증을 시도해 주세요."

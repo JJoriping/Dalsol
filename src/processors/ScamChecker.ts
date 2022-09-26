@@ -1,4 +1,4 @@
-import { Client, Guild, Message, PartialMessage } from "discord.js";
+import { Client, Colors, Guild, Message, PartialMessage } from "discord.js";
 import SETTINGS from "../data/settings.json";
 import { Logger } from "../utils/Logger";
 
@@ -68,7 +68,7 @@ export async function checkEmbeds(message:Message|PartialMessage):Promise<void>{
   await message.reply({
     embeds: [{
       title: "⚠ 경고",
-      color: 'ORANGE',
+      color: Colors.Orange,
       description: "금지된 내용 입력이 감지되어 자동 타임아웃 처리되었습니다.",
       footer: {
         text: "혹시나 잘못 처리되었다고 생각하시면 관리자에게 문의해 주세요."

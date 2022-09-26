@@ -1,7 +1,11 @@
-import { ColorResolvable, Message, PartialMessage, MessageOptions } from "discord.js";
+import { APIEmbed, Message, BaseMessageOptions, PartialMessage } from "discord.js";
 import { DateUnit } from "../enums/DateUnit";
 
-export function getBasePreset(title:string, color:ColorResolvable, message:Message|PartialMessage):MessageOptions{
+export function getBasePreset(title:string, color:number, message:Message|PartialMessage):BaseMessageOptions&{
+  'embeds': APIEmbed[]
+}{
+  const thumbnail = message.author?.avatarURL();
+
   return {
     content: `\`▼ 이벤트 ───────────────────\` <t:${Math.floor(Date.now() / DateUnit.SECOND)}:R>`,
     embeds: [
@@ -11,9 +15,7 @@ export function getBasePreset(title:string, color:ColorResolvable, message:Messa
           { name: "채널", value: `<#${message.channelId}>`, inline: true },
           { name: "주체", value: `<@${message.author?.id}>`, inline: true }
         ],
-        thumbnail: {
-          url: message.author?.avatarURL() || undefined
-        },
+        thumbnail: thumbnail ? { url: thumbnail } : undefined,
         color
       }
     ],
