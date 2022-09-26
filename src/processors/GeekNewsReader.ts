@@ -26,16 +26,13 @@ export async function processGeekNewsReader(client:Client, guild:Guild):Promise<
         name: v.title || "GeekNews",
         appliedTags: [ SETTINGS.geekNewsForumTag ],
         message: {
-          content: `✍️ **${v.author}**`,
-          embeds: [
-            {
-              color: Colors.DarkBlue,
-              description: v.contentSnippet || "(내용 없음)",
-              footer: {
-                text: `📅 ${v.pubDate ? new Date(v.pubDate).toLocaleString() : "-"}`
-              }
-            }
-          ],
+          content: [
+            `${v.contentSnippet || "(내용 없음)"}`,
+            "",
+            `> ✍️ 작성자: **${v.author}**`,
+            `> 📅 ${v.pubDate ? `<t:${Date.parse(v.pubDate) / DateUnit.SECOND}:R>` : "-"} 작성됨`,
+            "*Powered by GeekNews*"
+          ].join('\n'),
           components: [
             {
               type: ComponentType.ActionRow,
