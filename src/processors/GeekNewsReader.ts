@@ -13,9 +13,9 @@ const lastGeekNewsURLFile = "./res/last-geek-news-url";
 export async function processGeekNewsReader(client:Client, guild:Guild):Promise<void>{
   const forumChannel = await guild.channels.fetch(SETTINGS.geekNewsForumChannel);
   if(forumChannel?.type !== ChannelType.GuildForum) throw Error(`Invalid geekNewsChannel: ${SETTINGS.geekNewsForumChannel}`);
-  let lastGeekNewsURLs = getLastGeekNewsURLs();
 
   schedule(async () => {
+    const lastGeekNewsURLs = getLastGeekNewsURLs();
     const rssParser = new Parser();
     const feed = await rssParser.parseURL(SETTINGS.geekNewsRSS);
     const newItems = feed.items.filter(v => v.link && !lastGeekNewsURLs.includes(v.link));
