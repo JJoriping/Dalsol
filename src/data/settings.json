@@ -22,7 +22,25 @@
     "usersChannel": "984086482782412820",
     "messagesChannel": "984094304416985118"
   },
-  "geekNewsRSS": "http://feeds.feedburner.com/geeknews-feed",
-  "geekNewsForumChannel": "1019755965303763016",
-  "geekNewsForumTag": "1019929494296997978"
+  "rssForum": {
+    "channel": "1024645136908554321",
+    "topics": {
+      "geekNews": {
+        "url": "http://feeds.feedburner.com/geeknews-feed",
+        "tag": "1019929494296997978"
+      },
+      "jtbc": {
+        "url": "https://fs.jtbc.co.kr/RSS/newsrank.xml",
+        "tag": "1024645664296144906"
+      },
+      "steam": {
+        "url": "https://store.steampowered.com/feeds/news.xml",
+        "tag": "1024651994545270826"
+      },
+      "inven": {
+        "url": "https://webzine.inven.co.kr/news/rss.php?sclass=1",
+        "tag": "1024654752417579058"
+      }
+    }
+  }
 }
