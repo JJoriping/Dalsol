@@ -19,7 +19,8 @@ const client = new Client({
     IntentsBitField.Flags.GuildMessages,
     IntentsBitField.Flags.GuildMessageReactions,
     IntentsBitField.Flags.GuildVoiceStates,
-    IntentsBitField.Flags.GuildPresences
+    IntentsBitField.Flags.GuildPresences,
+    IntentsBitField.Flags.MessageContent,
   ],
   rest: {
     retries: 3
