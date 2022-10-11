@@ -24,22 +24,31 @@
   },
   "rssForum": {
     "channel": "1024645136908554321",
+    "interval": 3600000,
     "topics": {
       "geekNews": {
         "url": "http://feeds.feedburner.com/geeknews-feed",
-        "tag": "1024645454010519562"
+        "name": "GeekNews"
       },
       "jtbc": {
         "url": "https://fs.jtbc.co.kr/RSS/newsrank.xml",
-        "tag": "1024645664296144906"
-      },
-      "steam": {
-        "url": "https://store.steampowered.com/feeds/news.xml",
-        "tag": "1024651994545270826"
+        "name": "JTBC"
       },
       "inven": {
         "url": "https://webzine.inven.co.kr/news/rss.php?sclass=1",
-        "tag": "1024654752417579058"
+        "name": "인벤"
+      },
+      "mofa": {
+        "url": "https://rss.blog.naver.com/mofakr.xml",
+        "name": "외교부"
+      },
+      "animalPlanet": {
+        "url": "https://rss.blog.naver.com/papass2017.xml",
+        "name": "애니멀플래닛"
+      },
+      "stoneEntertainment": {
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_pwIXKXNm5KGhdEVzmY60A",
+        "name": "Stone ME"
       }
     }
   }

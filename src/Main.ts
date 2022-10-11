@@ -3,10 +3,10 @@ import CREDENTIAL from "./data/credential.json";
 import SETTINGS from "./data/settings.json";
 import { processChannelActivityLogger } from "./processors/ChannelActivityLogger";
 import { processGameEventMaker } from "./processors/GameEventMaker";
-import { processGeekNewsReader } from "./processors/GeekNewsReader";
 import { processGuestInterviewer } from "./processors/GuestInterviewer";
 import { processMessageLogger } from "./processors/MessageLogger";
 import { processTextRoleMaker } from "./processors/RoleMaker";
+import { processRSSReader } from "./processors/RSSReader";
 import { processScamChecker } from "./processors/ScamChecker";
 import { processStatisticsMonitor } from "./processors/StatisticsMonitor";
 import { CLOTHES } from "./utils/Clothes";
@@ -34,7 +34,8 @@ async function main():Promise<void>{
   client.once('ready', async () => {
     const guild = await client.guilds.fetch(SETTINGS.guild);
 
-    await processGeekNewsReader(client, guild);
+    await processRSSReader(client, guild);
+    if(CLOTHES.development) return;
     await processGuestInterviewer(client, guild);
     await processScamChecker(client, guild);
     await processTextRoleMaker(client, guild);
