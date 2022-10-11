@@ -21,31 +21,28 @@ export async function processRSSReader(client:Client, guild:Guild):Promise<void>
   if(forumChannel?.type !== ChannelType.GuildForum) throw Error(`Invalid rssForum: ${SETTINGS.rssForum.channel}`);
   
   // 스톤 엔터테인먼트
-  addRSSConsumer(forumChannel, 'stoneEntertainment', post => {
-    console.log(post);
-    return [
-      `> 📅 ${post.pubDate ? `<t:${Date.parse(post.pubDate) / DateUnit.SECOND}:R>` : "-"} 작성됨`,
-      `> 🔗 유튜브 링크: ${post.link}`
-    ];
-  }, 6 * DateUnit.MINUTE);
+  addRSSConsumer(forumChannel, 'stoneEntertainment', post => [
+    `> 📅 ${post.pubDate ? `<t:${Date.parse(post.pubDate) / DateUnit.SECOND}:R>` : "-"} 작성됨`,
+    `> 🔗 유튜브 링크: ${post.link}`
+  ], 30 * DateUnit.MINUTE);
   // 애니멀플래닛
-  addNaverRSSConsumer(forumChannel, 'animalPlanet', 5 * DateUnit.MINUTE);
+  addNaverRSSConsumer(forumChannel, 'animalPlanet', 25 * DateUnit.MINUTE);
   // Inven
   addRSSConsumer(forumChannel, 'inven', post => [
     `${post.contentSnippet || "(내용 없음)"}`,
     "",
     `> 📅 ${post.isoDate ? `<t:${Date.parse(post.isoDate) / DateUnit.SECOND}:R>` : "-"} 작성됨`,
     `> 🔗 기사 원문: ${post.link}`
-  ], 4 * DateUnit.MINUTE);
+  ], 20 * DateUnit.MINUTE);
   // 외교부
-  addNaverRSSConsumer(forumChannel, 'mofa', 3 * DateUnit.MINUTE);
+  addNaverRSSConsumer(forumChannel, 'mofa', 15 * DateUnit.MINUTE);
   // JTBC
   addRSSConsumer(forumChannel, 'jtbc', post => [
     `${post.contentSnippet || "(내용 없음)"}`,
     "",
     `> 📅 ${post.pubDate || "-"} 작성됨`,
     `> 🔗 기사 원문: ${post.link}`
-  ], 2 * DateUnit.MINUTE);
+  ], 10 * DateUnit.MINUTE);
   // GeekNews
   addRSSConsumer(forumChannel, 'geekNews', post => [
     `${post.contentSnippet || "(내용 없음)"}`,
@@ -53,7 +50,7 @@ export async function processRSSReader(client:Client, guild:Guild):Promise<void>
     `> ✍️ 작성자: **${post.author}**`,
     `> 📅 ${post.pubDate ? `<t:${Date.parse(post.pubDate) / DateUnit.SECOND}:R>` : "-"} 작성됨`,
     `> 🔗 기사 원문: ${post.link}`
-  ], DateUnit.MINUTE);
+  ], 5 * DateUnit.MINUTE);
 }
 function addNaverRSSConsumer(forumChannel:ForumChannel, topic:RSSTopic, punctualOffset?:number):void{
   addRSSConsumer(forumChannel, topic, post => [
