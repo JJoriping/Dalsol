@@ -6,9 +6,15 @@ import { Logger } from "../utils/Logger";
 import { schedule } from "../utils/System";
 import { RANKING_EMOJI } from "../utils/Text";
 import { orderBy } from "../utils/Utility";
+import { resolve } from "path";
+import { existsSync, mkdirSync, appendFileSync } from "fs";
 
 const MONITOR_TERM = 10 * DateUnit.MINUTE;
+const STATISTICS_DIRECTORY = resolve("dist", "statistics");
 
+if(!existsSync(STATISTICS_DIRECTORY)){
+  mkdirSync(STATISTICS_DIRECTORY);
+}
 export async function processStatisticsMonitor(client:Client, guild:Guild):Promise<void>{
   const usersChannel = await guild.channels.fetch(SETTINGS.statistics.usersChannel);
   const messagesChannel = await guild.channels.fetch(SETTINGS.statistics.messagesChannel);
@@ -45,6 +51,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
     pruneTimestampList(userMessageList);
     const logger = Logger.info("Statistics");
     const isYoung = process.uptime() < DateUnit.DAY / DateUnit.SECOND;
+    const now = Date.now();
 
     const regularRole = await guild.roles.fetch(SETTINGS.regularRole);
     const associateRole = await guild.roles.fetch(SETTINGS.associateRole);
@@ -67,6 +74,8 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       }
       await usersChannel.setName(text);
       logger.next("Users").put(text);
+      appendFileSync(resolve(STATISTICS_DIRECTORY, "regular-user-count.log"), `${now}\t${regularUserCount}\n`);
+      appendFileSync(resolve(STATISTICS_DIRECTORY, "online-user-count.log"), `${now}\t${onlineUserCount}\n`);
     }
     {
       let text = `💬・메시지・${userMessageCount?.toLocaleString()}⟋일`;
@@ -74,8 +83,8 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       if(isYoung) text += " ⚠";
       await messagesChannel.setName(text).catch(e => console.error(e));
       logger.next("Messages").put(text);
+      appendFileSync(resolve(STATISTICS_DIRECTORY, "user-message-count.log"), `${now}\t${userMessageCount}\n`);
     }
-
     await textChannelRankingMessage.edit(getTextChannelRankingMessagePayload());
     await textAuthorRankingMessage.edit(getTextAuthorRankingMessagePayload());
 

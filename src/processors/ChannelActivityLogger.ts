@@ -6,7 +6,7 @@ import { DateUnit } from "../enums/DateUnit";
 import { Logger } from "../utils/Logger";
 import { schedule } from "../utils/System";
 import { RANKING_EMOJI } from "../utils/Text";
-import { orderBy } from "../utils/Utility";
+import { orderBy, reduceToTable } from "../utils/Utility";
 import { channelRoleTable } from "./RoleMaker";
 
 type ChannelActivityData = {
@@ -139,11 +139,17 @@ export async function processChannelActivityLogger(client:Client, guild:Guild):P
       });
     }
     await roleChannelMessages.find(v => v.embeds[0]?.footer?.text === "활성도 랭킹")?.delete();
+    const list = Object.entries(grossScores).sort(orderBy(e => e[1], true)).filter(e => e[1] > 0).slice(0, 5);
+    const channels = reduceToTable(
+      await Promise.all(list.map(([ k ]) => guild.channels.fetch(k))),
+      v => v!.name,
+      v => v!.id
+    );
     await roleChannel.send({
       embeds: [{
         title: "🔥 달달소에서 요즘 뜨는 게임",
         description: Object.entries(grossScores).sort(orderBy(e => e[1], true)).filter(e => e[1] > 0).slice(0, 5).map(([ k, v ], i) => (
-          `${RANKING_EMOJI[i] || (i + 1)} <#${k}>\n> ${Math.round(v).toLocaleString()}점`
+          `${RANKING_EMOJI[i] || (i + 1)} <#${k}> (${channels[k]})\n> ${Math.round(v).toLocaleString()}점`
         )).join('\n') || "-",
         footer: { text: "활성도 랭킹" }
       }]
