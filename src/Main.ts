@@ -36,7 +36,7 @@ async function main():Promise<void>{
 
     await processRSSReader(client, guild);
     if(CLOTHES.development) return;
-    await processGuestInterviewer(client, guild);
+    // await processGuestInterviewer(client, guild);
     await processScamChecker(client, guild);
     await processTextRoleMaker(client, guild);
     await processMessageLogger(client, guild);
