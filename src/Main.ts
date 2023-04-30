@@ -34,16 +34,18 @@ async function main():Promise<void>{
   client.once('ready', async () => {
     const guild = await client.guilds.fetch(SETTINGS.guild);
 
-    await processRSSReader(client, guild);
-    if(CLOTHES.development) return;
-    // await processGuestInterviewer(client, guild);
-    await processScamChecker(client, guild);
-    await processTextRoleMaker(client, guild);
-    await processMessageLogger(client, guild);
-    await processGameEventMaker(client, guild);
-    await processChannelActivityLogger(client, guild);
-    await processStatisticsMonitor(client, guild);
-
+    if(CLOTHES.development){
+      await processStatisticsMonitor(client, guild);
+    }else{
+      await processRSSReader(client, guild);
+      // await processGuestInterviewer(client, guild);
+      await processScamChecker(client, guild);
+      await processTextRoleMaker(client, guild);
+      await processMessageLogger(client, guild);
+      await processGameEventMaker(client, guild);
+      await processChannelActivityLogger(client, guild);
+      await processStatisticsMonitor(client, guild);
+    }
     Logger.success("Discord").put(client.user?.tag).out();
   });
   client.on('debug', e => {

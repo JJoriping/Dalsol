@@ -1,17 +1,20 @@
-import { ChannelType, Client, Guild, MessageEditOptions, BaseMessageOptions, Snowflake } from "discord.js";
+import { createCanvas } from "canvas";
+import { Chart, registerables } from "chart.js";
+import { BaseMessageOptions, ChannelType, Client, Guild, MessageEditOptions, Snowflake } from "discord.js";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
+import { resolve } from "path";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
 import { CLOTHES } from "../utils/Clothes";
 import { Logger } from "../utils/Logger";
 import { schedule } from "../utils/System";
 import { RANKING_EMOJI } from "../utils/Text";
-import { orderBy } from "../utils/Utility";
-import { resolve } from "path";
-import { existsSync, mkdirSync, appendFileSync } from "fs";
+import { orderBy, reduceToTable } from "../utils/Utility";
 
 const MONITOR_TERM = 10 * DateUnit.MINUTE;
 const STATISTICS_DIRECTORY = resolve("dist", "statistics");
 
+Chart.register(...registerables);
 if(!existsSync(STATISTICS_DIRECTORY)){
   mkdirSync(STATISTICS_DIRECTORY);
 }
@@ -23,12 +26,17 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
     'channelId': Snowflake,
     'timestamp': number
   }> = [];
-  if(usersChannel?.type !== ChannelType.GuildVoice){
+  if(usersChannel?.type !== ChannelType.GuildAnnouncement){
     throw Error("Invalid usersChannel");
   }
   if(messagesChannel?.type !== ChannelType.GuildVoice){
     throw Error("Invalid messagesChannel");
   }
+  const usersChannelMessages = await usersChannel.messages.fetch();
+  const usersDetailMessage = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이")
+    || await usersChannel.send(getUsersDetailMessagePayload())
+  ;
+
   const messagesChannelMessages = await messagesChannel.messages.fetch();
   const textChannelRankingMessage = messagesChannelMessages.find(v => v.embeds[0].footer?.text === "채널별 메시지 랭킹")
     || await messagesChannel.send(getTextChannelRankingMessagePayload())
@@ -53,40 +61,38 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
     const isYoung = process.uptime() < DateUnit.DAY / DateUnit.SECOND;
     const now = Date.now();
 
-    const regularRole = await guild.roles.fetch(SETTINGS.regularRole);
-    const associateRole = await guild.roles.fetch(SETTINGS.associateRole);
     const members = await guild.members.fetch({ withPresences: true });
 
-    const regularUserCount = regularRole?.members.size;
-    const associateUserCount = associateRole?.members.size;
     const userMessageCount = userMessageList.length;
+    const userCount = members.filter(v => !v.user.bot).size;
     const onlineUserCount = members.reduce((pv, v) => {
       if(v.user.bot) return pv;
       if(!v.presence || v.presence.status === 'offline') return pv;
       return pv + 1;
     }, 0);
 
-    if(regularUserCount){
-      let text = `👪・${regularRole.name}・${onlineUserCount.toLocaleString()}⟋${regularUserCount.toLocaleString()}`;
+    {
+      let text = `👪・여행자・${onlineUserCount.toLocaleString()}⟋${userCount.toLocaleString()}`;
 
-      if(associateUserCount){
-        text += `+${associateUserCount.toLocaleString()}`;
-      }
       await usersChannel.setName(text);
       logger.next("Users").put(text);
-      appendFileSync(resolve(STATISTICS_DIRECTORY, "regular-user-count.log"), `${now}\t${regularUserCount}\n`);
+      appendFileSync(resolve(STATISTICS_DIRECTORY, "user-count.log"), `${now}\t${userCount}\n`);
       appendFileSync(resolve(STATISTICS_DIRECTORY, "online-user-count.log"), `${now}\t${onlineUserCount}\n`);
+      
+      await usersDetailMessage.edit(getUsersDetailMessagePayload());
     }
-    {
-      let text = `💬・메시지・${userMessageCount?.toLocaleString()}⟋일`;
-
-      if(isYoung) text += " ⚠";
-      await messagesChannel.setName(text).catch(e => console.error(e));
-      logger.next("Messages").put(text);
-      appendFileSync(resolve(STATISTICS_DIRECTORY, "user-message-count.log"), `${now}\t${userMessageCount}\n`);
+    if(!CLOTHES.development){
+      {
+        let text = `💬・메시지・${userMessageCount?.toLocaleString()}⟋일`;
+  
+        if(isYoung) text += " ⚠";
+        await messagesChannel.setName(text).catch(e => console.error(e));
+        logger.next("Messages").put(text);
+        appendFileSync(resolve(STATISTICS_DIRECTORY, "user-message-count.log"), `${now}\t${userMessageCount}\n`);
+      }
+      await textChannelRankingMessage.edit(getTextChannelRankingMessagePayload());
+      await textAuthorRankingMessage.edit(getTextAuthorRankingMessagePayload());
     }
-    await textChannelRankingMessage.edit(getTextChannelRankingMessagePayload());
-    await textAuthorRankingMessage.edit(getTextAuthorRankingMessagePayload());
 
     logger.out();
   }, MONITOR_TERM, {
@@ -105,6 +111,58 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       list.splice(0, i);
       break;
     }
+  }
+  function getUsersDetailMessagePayload():BaseMessageOptions&MessageEditOptions{
+    const canvas = createCanvas(800, 600);
+    const timeSlices = getTimeSlices(DateUnit.DAY, MONITOR_TERM);
+
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: timeSlices.map(v => new Date(v).toLocaleString("ko-KR")),
+        datasets: [
+          {
+            label: "활성 여행자",
+            data: resolveData("online-user-count.log", timeSlices, MONITOR_TERM),
+            borderColor: "#0cab46",
+            borderWidth: 3,
+            backgroundColor: "#6cf59e",
+            pointStyle: false,
+            fill: true
+          },
+          {
+            label: "여행자",
+            data: resolveData("user-count.log", timeSlices, MONITOR_TERM),
+            borderColor: "#1b33bf",
+            borderWidth: 3,
+            backgroundColor: "#4060e377",
+            pointStyle: false,
+            fill: true
+          }
+        ]
+      },
+      plugins: [
+        {
+          id: 'customCanvasBackgroundColor',
+          beforeDraw: (chart, args, options) => {
+            const {ctx} = chart;
+            ctx.save();
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = options.color || '#ffffff';
+            ctx.fillRect(0, 0, chart.width, chart.height);
+            ctx.restore();
+          }
+        }
+      ]
+    });
+    return {
+      embeds: [{
+        footer: { text: "여행자 수 추이" }
+      }],
+      files: [
+        { attachment: canvas.toBuffer() }
+      ]
+    };
   }
   function getTextChannelRankingMessagePayload():BaseMessageOptions&MessageEditOptions{
     return {
@@ -134,4 +192,29 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       }]
     };
   }
+}
+function resolveData(path:string, timeSlices:number[], step:number):Array<number|undefined>{
+  const R:Array<number|undefined> = [];
+  const timeSliceTable = reduceToTable(timeSlices, (_, i) => i, v => v / step);
+  const chunk = readFileSync(resolve(STATISTICS_DIRECTORY, path)).toString().split('\n');
+
+  for(const v of chunk){
+    const [ key, value ] = v.split('\t');
+    const actualKey = Math.floor(parseInt(key) / step);
+
+    if(actualKey in timeSliceTable){
+      R[timeSliceTable[actualKey]] = parseInt(value);
+    }
+  }
+  return R;
+}
+function getTimeSlices(length:number, step:number):number[]{
+  const to = Math.floor(Date.now() / step) * step;
+  const from = to - Math.floor(length / step) * step;
+  const R:number[] = [];
+
+  for(let i = from; i <= to; i += step){
+    R.push(i);
+  }
+  return R;
 }
