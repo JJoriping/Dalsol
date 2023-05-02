@@ -1,5 +1,5 @@
 import { createCanvas } from "canvas";
-import { Chart, registerables } from "chart.js";
+import { Chart, Plugin, registerables } from "chart.js";
 import { BaseMessageOptions, ChannelType, Client, Guild, MessageEditOptions, Snowflake } from "discord.js";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import { resolve } from "path";
@@ -13,6 +13,17 @@ import { orderBy, reduceToTable } from "../utils/Utility";
 
 const MONITOR_TERM = 10 * DateUnit.MINUTE;
 const STATISTICS_DIRECTORY = resolve("dist", "statistics");
+const whiteBackground:Plugin = {
+  id: 'whiteBackground',
+  beforeDraw: (chart, args, options) => {
+    const {ctx} = chart;
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = options.color || '#ffffff';
+    ctx.fillRect(0, 0, chart.width, chart.height);
+    ctx.restore();
+  }
+};
 
 Chart.register(...registerables);
 if(!existsSync(STATISTICS_DIRECTORY)){
@@ -33,8 +44,11 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
     throw Error("Invalid messagesChannel");
   }
   const usersChannelMessages = await usersChannel.messages.fetch();
-  const usersDetailMessage = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이")
-    || await usersChannel.send(getUsersDetailMessagePayload())
+  const userCountChart24Message = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이 (24시간)")
+    || await usersChannel.send(getUserCountChartMessagePayload("24h"))
+  ;
+  const userCountChart7Message = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이 (7일)")
+    || await usersChannel.send(getUserCountChartMessagePayload("7d"))
   ;
 
   const messagesChannelMessages = await messagesChannel.messages.fetch();
@@ -79,7 +93,8 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       appendFileSync(resolve(STATISTICS_DIRECTORY, "user-count.log"), `${now}\t${userCount}\n`);
       appendFileSync(resolve(STATISTICS_DIRECTORY, "online-user-count.log"), `${now}\t${onlineUserCount}\n`);
       
-      await usersDetailMessage.edit(getUsersDetailMessagePayload());
+      await userCountChart24Message.edit(getUserCountChartMessagePayload("24h"));
+      await userCountChart7Message.edit(getUserCountChartMessagePayload("7d"));
     }
     if(!CLOTHES.development){
       {
@@ -112,9 +127,13 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       break;
     }
   }
-  function getUsersDetailMessagePayload():BaseMessageOptions&MessageEditOptions{
+  function getUserCountChartMessagePayload(type:"24h"|"7d"):BaseMessageOptions&MessageEditOptions{
     const canvas = createCanvas(800, 600);
-    const timeSlices = getTimeSlices(DateUnit.DAY, MONITOR_TERM);
+    const step = type === "24h" ? MONITOR_TERM : DateUnit.HOUR;
+    const timeSlices = type === "24h"
+      ? getTimeSlices(DateUnit.DAY, step)
+      : getTimeSlices(DateUnit.WEEK, step)
+    ;
 
     new Chart(canvas, {
       type: "line",
@@ -123,7 +142,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
         datasets: [
           {
             label: "활성 여행자",
-            data: resolveData("online-user-count.log", timeSlices, MONITOR_TERM),
+            data: resolveData("online-user-count.log", timeSlices, step),
             borderColor: "#0cab46",
             borderWidth: 3,
             backgroundColor: "#6cf59e",
@@ -132,7 +151,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
           },
           {
             label: "여행자",
-            data: resolveData("user-count.log", timeSlices, MONITOR_TERM),
+            data: resolveData("user-count.log", timeSlices, step),
             borderColor: "#1b33bf",
             borderWidth: 3,
             backgroundColor: "#4060e377",
@@ -141,23 +160,20 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
           }
         ]
       },
-      plugins: [
-        {
-          id: 'customCanvasBackgroundColor',
-          beforeDraw: (chart, args, options) => {
-            const {ctx} = chart;
-            ctx.save();
-            ctx.globalCompositeOperation = 'destination-over';
-            ctx.fillStyle = options.color || '#ffffff';
-            ctx.fillRect(0, 0, chart.width, chart.height);
-            ctx.restore();
+      options: {
+        scales: {
+          x: {
+            ticks: {
+              autoSkipPadding: 8
+            }
           }
         }
-      ]
+      },
+      plugins: [ whiteBackground ]
     });
     return {
       embeds: [{
-        footer: { text: "여행자 수 추이" }
+        footer: { text: `여행자 수 추이 (${type === "24h" ? "24시간" : "7일"})` }
       }],
       files: [
         { attachment: canvas.toBuffer() }
