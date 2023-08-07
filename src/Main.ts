@@ -44,6 +44,7 @@ async function main():Promise<void>{
       await processGameEventMaker(client, guild);
       await processChannelActivityLogger(client, guild);
       await processStatisticsMonitor(client, guild);
+      await processSpellchecker(client, guild);
     }
     Logger.success("Discord").put(client.user?.tag).out();
   });
