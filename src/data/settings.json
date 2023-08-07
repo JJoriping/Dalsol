@@ -32,7 +32,7 @@
     "되도(?!\\s*않)": "spellchecker_eho",
     "되[버보서야요있주]": "spellchecker_eho",
     "됬": "spellchecker_ehoT",
-    "돼[네죠]": "spellchecker_ehl",
+    "돼[고나네는어었잖죠]": "spellchecker_ehl",
     "됄": "spellchecker_ehlf",
     "됌": "spellchecker_ehla",
     "바꼈": "spellchecker_qkRnldjT",
