@@ -61,6 +61,17 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
       driver.executeScript(`[ ...document.querySelectorAll("ol>li") ].map(($v, i) => {
         $v.innerHTML = (i + 1) + ". " + $v.innerHTML;
       })`);
+      driver.executeScript(`[ ...document.querySelectorAll("pre code") ].map(($v, i) => {
+        const $pre = $v.closest("pre");
+        const $div = $pre && $pre.querySelector(".absolute");
+        const language = ($div && $div.textContent) || "";
+
+        if($div) $div.remove();
+        $v.innerHTML = "\`\`\`" + language + "\\n" + $v.textContent + "\\n\`\`\`";
+      })`);
+      driver.executeScript(`[ ...document.querySelectorAll("span[class] code") ].map(($v, i) => {
+        $v.innerHTML = "\`" + $v.innerHTML + "\`";
+      })`);
 
       global.clearInterval(timer);
       await message.reply({
