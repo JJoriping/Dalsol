@@ -11,6 +11,7 @@ import { processStatisticsMonitor } from "./processors/StatisticsMonitor";
 import { CLOTHES } from "./utils/Clothes";
 import { Logger } from "./utils/Logger";
 import { processSpellchecker } from "./processors/Spellchecker";
+import { processPerplexityAgent } from "./processors/PerplexityAgent";
 
 const client = new Client({
   intents: [
@@ -35,7 +36,7 @@ async function main():Promise<void>{
     const guild = await client.guilds.fetch(SETTINGS.guild);
 
     if(CLOTHES.development){
-      await processSpellchecker(client, guild);
+      await processPerplexityAgent(client, guild);
     }else{
       await processRSSReader(client, guild);
       await processScamChecker(client, guild);
@@ -45,6 +46,7 @@ async function main():Promise<void>{
       await processChannelActivityLogger(client, guild);
       await processStatisticsMonitor(client, guild);
       await processSpellchecker(client, guild);
+      await processPerplexityAgent(client, guild);
     }
     Logger.success("Discord").put(client.user?.tag).out();
   });

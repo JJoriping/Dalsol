@@ -56,6 +56,7 @@
     "(덮|붙)혀": "spellchecker_du",
     "(간간|곰곰|깊숙|덮|붙|일일)히": "spellchecker_dl"
   },
+  "perplexityPattern": "^달솔아\\s+(.+\\?)$",
   "rssForum": {
     "channel": "1024645136908554321",
     "interval": 3600000,
@@ -75,10 +76,6 @@
       "mofa": {
         "url": "https://rss.blog.naver.com/mofakr.xml",
         "name": "외교부"
-      },
-      "animalPlanet": {
-        "url": "https://rss.blog.naver.com/papass2017.xml",
-        "name": "애니멀플래닛"
       },
       "stoneEntertainment": {
         "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_pwIXKXNm5KGhdEVzmY60A",

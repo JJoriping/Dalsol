@@ -25,8 +25,6 @@ export async function processRSSReader(client:Client, guild:Guild):Promise<void>
     `> 📅 ${post.pubDate ? `<t:${Date.parse(post.pubDate) / DateUnit.SECOND}:R>` : "-"} 작성됨`,
     `> 🔗 유튜브 링크: ${post.link}`
   ], 30 * DateUnit.MINUTE);
-  // 애니멀플래닛
-  addNaverRSSConsumer(forumChannel, 'animalPlanet', 25 * DateUnit.MINUTE);
   // Inven
   addRSSConsumer(forumChannel, 'inven', post => [
     `${post.contentSnippet || "(내용 없음)"}`,
