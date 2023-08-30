@@ -4,7 +4,8 @@ import { Logger } from "../utils/Logger";
 import { sleep } from "../utils/Utility";
 
 export async function processPerplexityAgent(client:Client, guild:Guild):Promise<void>{
-  const pattern = new RegExp(SETTINGS.perplexityPattern);
+  const koPattern = new RegExp(SETTINGS.perplexityPattern.ko);
+  const enPattern = new RegExp(SETTINGS.perplexityPattern.en, "i")
   let pending = false;
 
   await import("puppeteer").then(Puppeteer => {
@@ -22,11 +23,11 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
     if(message.author.bot){
       return;
     }
-    const chunk = message.content.match(pattern);
+    const [ chunk, locale ] = parseMessage(message.content);
     if(!chunk?.[1].trim()){
       return;
     }
-    if(chunk[1].length > 100){
+    if(chunk[1].length > 200){
       await message.react("❌");
       return;
     }
@@ -35,10 +36,17 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
       return;
     }
     pending = true;
-    Logger.info("Perplexity").put(chunk[1]).out();
+    Logger.info("Perplexity").put(chunk[1])
+      .next("Author").put(message.author.id)
+      .out()
+    ;
     await message.channel.sendTyping();
     try{
-      const response = await Perplexity.send(chunk[1]);
+      const response = await Perplexity.send(
+        locale === "ko"
+          ? `${chunk[1]} 한국어로 대답해 주세요.`
+          : chunk[1]
+      );
       await message.reply({
         embeds: [{
           color: Colors.Blue,
@@ -54,4 +62,15 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
     }
     pending = false;
   });
+  function parseMessage(value:string):[RegExpMatchArray|null, "ko"|"en"|null]{
+    let chunk = value.match(koPattern);
+    if(chunk){
+      return [ chunk, "ko" ];
+    }
+    chunk = value.match(enPattern);
+    if(chunk){
+      return [ chunk, "en" ];
+    }
+    return [ null, null ];
+  }
 }

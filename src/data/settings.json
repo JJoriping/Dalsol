@@ -56,7 +56,10 @@
     "(덮|붙)혀": "spellchecker_du",
     "(간간|곰곰|깊숙|덮|붙|일일)히": "spellchecker_dl"
   },
-  "perplexityPattern": "^달솔아\\s+(.+\\?)$",
+  "perplexityPattern": {
+    "ko": "^달솔아\\s+(.+\\?)$",
+    "en": "^hey dalsol,\\s*(.+\\?)$"
+  },
   "rssForum": {
     "channel": "1024645136908554321",
     "interval": 3600000,
