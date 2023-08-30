@@ -6,7 +6,7 @@ import { DateUnit } from "../enums/DateUnit";
 import { Logger } from "../utils/Logger";
 import { sleep } from "../utils/Utility";
 
-const questionValidityChecker = /[a-z가-힣]/i;
+const questionValidityChecker = /[a-z가-힣\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}\p{sc=Cyrillic}]{2}/iu;
 
 export async function processPerplexityAgent(client:Client, guild:Guild):Promise<void>{
   const koPattern = new RegExp(SETTINGS.perplexityPattern.ko);
