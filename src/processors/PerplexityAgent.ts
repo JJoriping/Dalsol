@@ -1,23 +1,21 @@
 import { Client, Colors, Guild } from "discord.js";
+import { Browser, Builder, Key, until } from "selenium-webdriver";
+import { Options } from "selenium-webdriver/chrome";
 import SETTINGS from "../data/settings.json";
+import { DateUnit } from "../enums/DateUnit";
 import { Logger } from "../utils/Logger";
 import { sleep } from "../utils/Utility";
+
+const questionValidityChecker = /[a-z가-힣]/i;
 
 export async function processPerplexityAgent(client:Client, guild:Guild):Promise<void>{
   const koPattern = new RegExp(SETTINGS.perplexityPattern.ko);
   const enPattern = new RegExp(SETTINGS.perplexityPattern.en, "i")
+  const driver = await new Builder().forBrowser(Browser.CHROME)
+    .setChromeOptions(new Options().addArguments("--headless", "--no-sandbox").windowSize({ width: 800, height: 600 }))
+    .build()
+  ;
   let pending = false;
-
-  await import("puppeteer").then(Puppeteer => {
-    const _launch = Puppeteer.launch;
-
-    Object.assign(Puppeteer, { launch: function(this:typeof Puppeteer, options:Parameters<typeof _launch>[0] = {}){
-      options.args ??= [];
-      options.args.push("--no-sandbox");
-      return _launch.call(this, options);
-    }});
-  });
-  const Perplexity = await import("node_perplexityai");
 
   client.on('messageCreate', async message => {
     if(message.author.bot){
@@ -27,7 +25,7 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
     if(!chunk?.[1].trim()){
       return;
     }
-    if(chunk[1].length > 200){
+    if(chunk[1].length < 5 || chunk[1].length > 200 || !questionValidityChecker.test(chunk[1])){
       await message.react("❌");
       return;
     }
@@ -35,30 +33,49 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
       await message.react("⌛");
       return;
     }
+    const query = locale === "ko"
+      ? `${chunk[1]} 한국어로 대답해 주세요.`
+      : chunk[1]
+    ;
+    await message.channel.sendTyping();
+    const timer = global.setInterval(() => message.channel.sendTyping(), 10 * DateUnit.SECOND);
+
     pending = true;
     Logger.info("Perplexity").put(chunk[1])
       .next("Author").put(message.author.id)
       .out()
     ;
-    await message.channel.sendTyping();
     try{
-      const response = await Perplexity.send(
-        locale === "ko"
-          ? `${chunk[1]} 한국어로 대답해 주세요.`
-          : chunk[1]
-      );
+      await driver.get("https://www.perplexity.ai/");
+      await driver.findElement({ css: "textarea[autofocus]" }).sendKeys(query, Key.ENTER);
+      const $answer = await driver
+        .wait(until.elementLocated({ xpath: "//div[text()='Answer  ']" }), DateUnit.MINUTE)
+        .findElement({ xpath: "../../../../following-sibling::div[1]" })
+      ;
+      const $images = await $answer.findElements({ css: 'img[alt="related"]' });
+
+      driver.executeScript(`[ ...document.querySelectorAll(".citation") ].map($v => $v.remove());`);
+      driver.executeScript(`[ ...document.querySelectorAll("strong") ].map($v => {
+        $v.innerHTML = "**" + $v.innerHTML + "**";
+      });`);
+      driver.executeScript(`[ ...document.querySelectorAll("ol>li") ].map(($v, i) => {
+        $v.innerHTML = (i + 1) + ". " + $v.innerHTML;
+      })`);
+
+      global.clearInterval(timer);
       await message.reply({
         embeds: [{
           color: Colors.Blue,
-          description: response,
+          description: await $answer.getText(),
+          image: { url: await $images[0]?.getAttribute("src") },
           footer: { text: "Powered by perplexity.ai" }
-        }]
+        }],
       });
-      await Perplexity.forget();
       await sleep(5);
     }catch(err){
+      global.clearInterval(timer);
       console.warn(err);
-      await message.react("�");
+      await message.react("😵");
     }
     pending = false;
   });

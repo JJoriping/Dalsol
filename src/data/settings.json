@@ -58,7 +58,7 @@
   },
   "perplexityPattern": {
     "ko": "^달솔아\\s+(.+\\?)$",
-    "en": "^hey dalsol,\\s*(.+\\?)$"
+    "en": "^hey dalsol,?\\s+(.+\\?)$"
   },
   "rssForum": {
     "channel": "1024645136908554321",
