@@ -1,6 +1,6 @@
 {
   "name": "dalsol",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "main": "dist/Main.js",
   "repository": "https://github.com/JJoriping/Dalsol.git",
   "author": "JJoriping <op@jjo.kr>",

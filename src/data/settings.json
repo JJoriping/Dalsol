@@ -56,9 +56,11 @@
     "(덮|붙)혀": "spellchecker_du",
     "(간간|곰곰|깊숙|덮|붙|일일)히": "spellchecker_dl"
   },
+  "perplexityQuestionLengthLimit": 500,
+  "perplexityChannel": "1146593399017832538",
   "perplexityPattern": {
-    "ko": "^달솔아\\s+(.+\\?)$",
-    "en": "^hey dalsol,?\\s+(.+\\?)$"
+    "ko": "^달솔아\\s+([\\S\\s]+)$",
+    "en": "^hey dalsol,?\\s+([\\S\\s]+)$"
   },
   "rssForum": {
     "channel": "1024645136908554321",

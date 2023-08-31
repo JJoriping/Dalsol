@@ -1,12 +1,12 @@
-import { Client, Colors, Guild, Snowflake, SnowflakeUtil } from "discord.js";
+import { Client, Colors, Guild, Message, Snowflake, SnowflakeUtil } from "discord.js";
 import { Browser, Builder, Key, WebDriver, until } from "selenium-webdriver";
 import { Options } from "selenium-webdriver/chrome";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
-import { Logger } from "../utils/Logger";
-import { sleep } from "../utils/Utility";
-import { schedule } from "../utils/System";
 import { CLOTHES } from "../utils/Clothes";
+import { Logger } from "../utils/Logger";
+import { schedule } from "../utils/System";
+import { IGNORE, sleep } from "../utils/Utility";
 
 const questionValidityChecker = /[a-z가-힣\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}\p{sc=Cyrillic}]{2}/iu;
 
@@ -16,11 +16,12 @@ type Context = {
   'length': number
 };
 export async function processPerplexityAgent(client:Client, guild:Guild):Promise<void>{
-  const koPattern = new RegExp(CLOTHES.development ? "^달솔아~ (.+)$" : SETTINGS.perplexityPattern.ko);
-  const enPattern = new RegExp(CLOTHES.development ? "^hey dalsol~ (.+)$" : SETTINGS.perplexityPattern.en, "i");
+  const koPattern = new RegExp(SETTINGS.perplexityPattern.ko);
+  const enPattern = new RegExp(SETTINGS.perplexityPattern.en, "i");
   const contextMap = new Map<Snowflake, Context>();
+  const queue:Message[] = [];
 
-  let pending = false;
+  let pending:string|undefined;
 
   schedule(async () => {
     const now = Date.now();
@@ -30,48 +31,74 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
 
       if(gap > DateUnit.HOUR){
         Logger.log("Perplexity Session Expiry").put(k).out();
-        await v.driver.quit();
+        await v.driver.quit().catch(IGNORE);
         contextMap.delete(k);
       }
     }
   }, 10 * DateUnit.MINUTE);
+  schedule(async () => {
+    if(!queue.length) return;
+    if(pending) return;
+    const message = queue.shift()!;
+    
+    await message.react("⏳");
+    await message.react("⌛");
+    await handleMessage(message);
+  }, 5 * DateUnit.SECOND);
+
   client.on('messageCreate', async message => {
     if(message.author.bot){
       return;
     }
+    if(SETTINGS.perplexityChannel !== message.channelId){
+      return;
+    }
+    await handleMessage(message);
+  });
+  async function handleMessage(message:Message):Promise<void>{
     const context = message.reference?.messageId && contextMap.get(message.reference.messageId) || null;
+    let originalQuery:string;
     let query:string;
 
     if(context){
       if(context.author !== message.author.id){
         return;
       }
-      query = message.content;
+      query = originalQuery = message.content;
     }else{
       const [ chunk, locale ] = parseMessage(message.content);
       if(!chunk?.[1].trim()){
         return;
       }
+      originalQuery = chunk[1];
       query = locale === "ko"
-        ? `${chunk[1]} 한국어로 대답해 주세요.`
+        ? `(한국어로 대답해 주세요)\n${chunk[1]}`
         : chunk[1]
       ;
     }
-    if(query.length < 5 || query.length > 200 || !questionValidityChecker.test(query)){
+    if(originalQuery.length < 5 || originalQuery.length > SETTINGS.perplexityQuestionLengthLimit || !questionValidityChecker.test(originalQuery)){
       await message.react("❌");
       return;
     }
     if(pending){
-      await message.react("⌛");
+      if(pending === message.content
+        || queue.length >= 5
+        || queue.some(v => v.author.id === message.author.id || v.content === message.content)
+      ){
+        await message.react("✋");
+        return;
+      }
+      queue.push(message);
+      await message.react("⏳");
       return;
     }
     await message.channel.sendTyping();
-    const timer = global.setInterval(() => message.channel.sendTyping(), 10 * DateUnit.SECOND);
-    const logger = Logger.info("Perplexity").put(query)
+    const timer = global.setInterval(() => message.channel.sendTyping(), 9 * DateUnit.SECOND);
+    const logger = Logger.info("Perplexity").put(message.content)
       .next("Author").put(message.author.id)
     ;
 
-    pending = true;
+    pending = query;
     if(context) logger.next("Origin").put(message.reference?.messageId);
     logger.out();
     try{
@@ -86,12 +113,22 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
         await driver.findElement({ css: "textarea[autofocus]" }).sendKeys(query, Key.ENTER);
       }
       const $answer = await driver
-        .wait(until.elementLocated({ xpath: `(//div[text()='Answer  '])[${(context?.length || 0) + 1}]` }), DateUnit.MINUTE)
+        .wait(until.elementLocated({ xpath: `(//div[text()='Answer  '])[${(context?.length || 0) + 1}]` }), 2 * DateUnit.MINUTE)
         .findElement({ xpath: "../../../../following-sibling::div[1]" })
       ;
-      const $images = await $answer.findElements({ css: 'img[alt="related"]' });
+      const $links = await $answer.findElements({ xpath: "//p[text()='Quick Search']/../../following-sibling::div[1]//a[not(contains(@class, 'dalsol'))]" });
+      const $citations = await $answer.findElements({ css: ".citation" });
+      const $images = await $answer.findElements({ css: 'img[alt="related"]:not(.dalsol)' });
+      const citations:string[] = [];
+      for(const $v of $citations) citations.push(await $v.getAttribute("href"));
 
+      if(CLOTHES.development){
+        console.log("─BEFORE─────────────\n" + await $answer.getText() + "\n────────────────────");
+      }
       driver.executeScript(`[ ...document.querySelectorAll(".citation") ].map($v => $v.remove());`);
+      driver.executeScript(`[ ...document.querySelectorAll('img[alt="related"]:not(.dalsol)') ].map($v => $v.classList.add("dalsol"));`);
+      driver.executeScript(`[ ...document.querySelectorAll("a:not(.dalsol)") ].map($v => $v.classList.add("dalsol"));`);
+
       driver.executeScript(`[ ...document.querySelectorAll("strong:not(.dalsol)") ].map($v => {
         $v.innerHTML = "**" + $v.innerHTML + "**";
         $v.classList.add("dalsol");
@@ -111,22 +148,39 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
         const language = ($div && $div.textContent) || "";
 
         if($div) $div.remove();
-        $v.innerHTML = "\`\`\`" + language + "\\n" + $v.textContent + "\\n\`\`\`";
+        $v.textContent = "\`\`\`" + language + "\\n" + $v.textContent + "\\n\`\`\`";
         $v.classList.add("dalsol");
       })`);
       driver.executeScript(`[ ...document.querySelectorAll("span[class] code:not(.dalsol)") ].map(($v, i) => {
-        $v.innerHTML = "\`" + $v.innerHTML + "\`";
+        $v.textContent = "\`" + $v.textContent + "\`";
         $v.classList.add("dalsol");
       })`);
+      if(CLOTHES.development){
+        console.log("─AFTER──────────────\n" + await $answer.getText() + "\n────────────────────");
+      }
 
       global.clearInterval(timer);
+      const citatedLinks:string[] = [];
+      
+      for(const $v of $links){
+        const href = await $v.getAttribute("href");
+        if(!citations.includes(href)){
+          continue;
+        }
+        citatedLinks.push(`[${await $v.findElement({ css: ".default" }).getText()}](${href})`);
+      }
       const answer = await message.reply({
-        embeds: [{
-          color: Colors.Blue,
-          description: await $answer.getText(),
-          image: { url: await $images[0]?.getAttribute("src") },
-          footer: { text: "Powered by perplexity.ai" }
-        }],
+        embeds: [
+          {
+            color: Colors.Blue,
+            description: await $answer.getText(),
+            image: { url: await $images[0]?.getAttribute("src") }
+          },
+          {
+            description: citatedLinks.map((v, i) => `${i + 1}. ${v}`).join("\n"),
+            footer: { text: "Powered by perplexity.ai" }
+          }
+        ],
       });
       if(context){
         context.length++;
@@ -140,8 +194,8 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
       console.warn(err);
       await message.react("😵");
     }
-    pending = false;
-  });
+    pending = undefined;
+  }
   function parseMessage(value:string):[RegExpMatchArray|null, "ko"|"en"|null]{
     let chunk = value.match(koPattern);
     if(chunk){
