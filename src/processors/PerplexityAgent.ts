@@ -1,4 +1,5 @@
 import { Client, Colors, Guild, Message, Snowflake, SnowflakeUtil } from "discord.js";
+import { writeFileSync } from "fs";
 import { Browser, Builder, Key, WebDriver, until } from "selenium-webdriver";
 import { Options } from "selenium-webdriver/chrome";
 import SETTINGS from "../data/settings.json";
@@ -41,7 +42,6 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
     if(pending) return;
     const message = queue.shift()!;
     
-    await message.react("⏳");
     await message.react("⌛");
     await handleMessage(message);
   }, 5 * DateUnit.SECOND);
@@ -50,7 +50,8 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
     if(message.author.bot){
       return;
     }
-    if(SETTINGS.perplexityChannel !== message.channelId){
+    const channelId = message.channel.isThread() ? message.channel.parentId : message.channel.id;
+    if(SETTINGS.perplexityChannel !== channelId){
       return;
     }
     await handleMessage(message);
@@ -97,20 +98,22 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
     const logger = Logger.info("Perplexity").put(message.content)
       .next("Author").put(message.author.id)
     ;
+    let driver:WebDriver|undefined;
 
     pending = query;
     if(context) logger.next("Origin").put(message.reference?.messageId);
     logger.out();
     try{
-      const driver = context?.driver || await new Builder().forBrowser(Browser.CHROME)
+      driver = context?.driver || await new Builder().forBrowser(Browser.CHROME)
         .setChromeOptions(new Options().addArguments("--headless", "--no-sandbox").windowSize({ width: 800, height: 600 }))
         .build()
       ;
       if(context){
-        await driver.findElement({ css: "textarea[placeholder]" }).sendKeys(query, Key.ENTER);
+        console.log(Key.SHIFT, Key.ENTER);
+        await driver.findElement({ css: "textarea[placeholder]" }).sendKeys(toKey(query), Key.ENTER);
       }else{
         await driver.get("https://www.perplexity.ai/");
-        await driver.findElement({ css: "textarea[autofocus]" }).sendKeys(query, Key.ENTER);
+        await driver.findElement({ css: "textarea[autofocus]" }).sendKeys(toKey(query), Key.ENTER);
       }
       const $answer = await driver
         .wait(until.elementLocated({ xpath: `(//div[text()='Answer  '])[${(context?.length || 0) + 1}]` }), 2 * DateUnit.MINUTE)
@@ -125,23 +128,23 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
       if(CLOTHES.development){
         console.log("─BEFORE─────────────\n" + await $answer.getText() + "\n────────────────────");
       }
-      driver.executeScript(`[ ...document.querySelectorAll(".citation") ].map($v => $v.remove());`);
-      driver.executeScript(`[ ...document.querySelectorAll('img[alt="related"]:not(.dalsol)') ].map($v => $v.classList.add("dalsol"));`);
-      driver.executeScript(`[ ...document.querySelectorAll("a:not(.dalsol)") ].map($v => $v.classList.add("dalsol"));`);
+      await driver.executeScript(`[ ...document.querySelectorAll(".citation") ].map($v => $v.remove());`);
+      await driver.executeScript(`[ ...document.querySelectorAll('img[alt="related"]:not(.dalsol)') ].map($v => $v.classList.add("dalsol"));`);
+      await driver.executeScript(`[ ...document.querySelectorAll("a:not(.dalsol)") ].map($v => $v.classList.add("dalsol"));`);
 
-      driver.executeScript(`[ ...document.querySelectorAll("strong:not(.dalsol)") ].map($v => {
+      await driver.executeScript(`[ ...document.querySelectorAll("strong:not(.dalsol)") ].map($v => {
         $v.innerHTML = "**" + $v.innerHTML + "**";
         $v.classList.add("dalsol");
       });`);
-      driver.executeScript(`[ ...document.querySelectorAll("ol>li:not(.dalsol)") ].map(($v, i) => {
+      await driver.executeScript(`[ ...document.querySelectorAll("ol>li:not(.dalsol)") ].map(($v, i) => {
         $v.innerHTML = (i + 1) + ". " + $v.innerHTML;
         $v.classList.add("dalsol");
       })`);
-      driver.executeScript(`[ ...document.querySelectorAll("ul>li:not(.dalsol)") ].map(($v, i) => {
+      await driver.executeScript(`[ ...document.querySelectorAll("ul>li:not(.dalsol)") ].map(($v, i) => {
         $v.innerHTML = "- " + $v.innerHTML;
         $v.classList.add("dalsol");
       })`);
-      driver.executeScript(`[ ...document.querySelectorAll("pre code:not(.dalsol)") ].map(($v, i) => {
+      await driver.executeScript(`[ ...document.querySelectorAll("pre code:not(.dalsol)") ].map(($v, i) => {
         if(!$v.textContent.trim()) return;
         const $pre = $v.closest("pre");
         const $div = $pre && $pre.querySelector(".absolute");
@@ -151,7 +154,7 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
         $v.textContent = "\`\`\`" + language + "\\n" + $v.textContent + "\\n\`\`\`";
         $v.classList.add("dalsol");
       })`);
-      driver.executeScript(`[ ...document.querySelectorAll("span[class] code:not(.dalsol)") ].map(($v, i) => {
+      await driver.executeScript(`[ ...document.querySelectorAll("span[class] code:not(.dalsol)") ].map(($v, i) => {
         $v.textContent = "\`" + $v.textContent + "\`";
         $v.classList.add("dalsol");
       })`);
@@ -193,6 +196,11 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
       global.clearInterval(timer);
       console.warn(err);
       await message.react("😵");
+      if(driver){
+        const chunk = await driver.takeScreenshot();
+
+        writeFileSync(`./res/selenium-logs/${Date.now()}.png`, Buffer.from(chunk, "base64"));
+      }
     }
     pending = undefined;
   }
@@ -207,4 +215,7 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
     }
     return [ null, null ];
   }
+}
+function toKey(value:string):string{
+  return value.replaceAll("\n", Key.SHIFT + Key.ENTER + Key.SHIFT);
 }
