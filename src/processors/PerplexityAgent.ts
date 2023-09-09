@@ -2,6 +2,7 @@ import { Client, Colors, Guild, Message, Snowflake, SnowflakeUtil } from "discor
 import { writeFileSync } from "fs";
 import { Browser, Builder, Key, WebDriver, until } from "selenium-webdriver";
 import { Options } from "selenium-webdriver/chrome";
+import CREDENTIAL from "../data/credential.json";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
 import { CLOTHES } from "../utils/Clothes";
@@ -105,15 +106,19 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
     logger.out();
     try{
       driver = context?.driver || await new Builder().forBrowser(Browser.CHROME)
-        .setChromeOptions(new Options().addArguments("--headless", "--no-sandbox").windowSize({ width: 800, height: 600 }))
+        .setChromeOptions(new Options()
+          .addArguments("--headless", "--no-sandbox", "--ignore-certificate-errors")
+          .windowSize({ width: 800, height: 600 })
+        )
         .build()
       ;
       if(context){
-        console.log(Key.SHIFT, Key.ENTER);
         await driver.findElement({ css: "textarea[placeholder]" }).sendKeys(toKey(query), Key.ENTER);
       }else{
-        await driver.get("https://www.perplexity.ai/");
-        await driver.findElement({ css: "textarea[autofocus]" }).sendKeys(toKey(query), Key.ENTER);
+        await driver.get(CREDENTIAL.perplexityHomepageURL);
+        const $textarea = await driver.findElement({ css: "textarea[autofocus]" });
+        await driver.wait(until.elementIsVisible($textarea));
+        await $textarea.sendKeys(toKey(query), Key.ENTER);
       }
       const $answer = await driver
         .wait(until.elementLocated({ xpath: `(//div[text()='Answer  '])[${(context?.length || 0) + 1}]` }), 2 * DateUnit.MINUTE)
