@@ -121,7 +121,7 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
         await $textarea.sendKeys(toKey(query), Key.ENTER);
       }
       const $answer = await driver
-        .wait(until.elementLocated({ xpath: `(//h2[text()='Answer  '])[${(context?.length || 0) + 1}]` }), 2 * DateUnit.MINUTE)
+        .wait(until.elementLocated({ xpath: `(//*[text()='Answer  '])[${(context?.length || 0) + 1}]` }), 2 * DateUnit.MINUTE)
         .findElement({ xpath: "../../../../following-sibling::div[1]" })
       ;
       const $links = await $answer.findElements({ xpath: "//p[text()='Quick Search']/../../following-sibling::div[1]//a[not(contains(@class, 'dalsol'))]" });
