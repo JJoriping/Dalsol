@@ -1,10 +1,7 @@
 import { Client, Colors, Guild, Message, Snowflake, SnowflakeUtil } from "discord.js";
 import { writeFileSync } from "fs";
-import { createServer, request as httpRequest } from "http";
-import { request as httpsRequest } from "https";
 import { Browser, Builder, Key, WebDriver, until } from "selenium-webdriver";
 import { Options } from "selenium-webdriver/chrome";
-import { URL } from "url";
 import CREDENTIAL from "../data/credential.json";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
@@ -21,31 +18,7 @@ type Context = {
   'length': number
 };
 export async function processPerplexityAgent(client:Client, guild:Guild):Promise<void>{
-  const proxyServer = createServer((req, res) => {
-    if(!req.url){
-      res.statusCode = 501;
-      res.end();
-      return;
-    }
-    const url = new URL(req.url);
-    if(url.host !== CREDENTIAL.perplexityProxyTargetAddress && url.pathname.startsWith("/socket.io")){
-      url.protocol = "https";
-      url.host = CREDENTIAL.perplexityProxyTargetAddress;
-      url.port = "";
-    }
-    const actualReq = (url.protocol === "https:" ? httpsRequest : httpRequest)(url, {
-      rejectUnauthorized: false,
-      method: req.method,
-      headers: req.headers
-    }, actualRes => {
-      if(!actualRes.statusCode){
-        throw Error("No statusCode found");
-      }
-      res.writeHead(actualRes.statusCode, actualRes.headers);
-      actualRes.pipe(res);
-    });
-    req.pipe(actualReq);
-  });
+  // const proxyServer = createProxyServer({ target: "ec2-52-90-162-236.compute-1.amazonaws.com" });
   const koPattern = new RegExp(SETTINGS.perplexityPattern.ko);
   const enPattern = new RegExp(SETTINGS.perplexityPattern.en, "i");
   const contextMap = new Map<Snowflake, Context>();
@@ -53,7 +26,7 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
 
   let pending:string|undefined;
 
-  proxyServer.listen(CREDENTIAL.perplexityProxyPort, "127.0.0.1");
+  // proxyServer.listen(CREDENTIAL.perplexityProxyPort, "127.0.0.1");
   schedule(async () => {
     const now = Date.now();
 
@@ -141,7 +114,7 @@ export async function processPerplexityAgent(client:Client, guild:Guild):Promise
             "--no-sandbox",
             "--disable-web-security",
             "--ignore-certificate-errors",
-            `--proxy-server=127.0.0.1:${CREDENTIAL.perplexityProxyPort}`
+            // `--proxy-server=127.0.0.1:${CREDENTIAL.perplexityProxyPort}`
           )
           .windowSize({ width: 800, height: 600 })
         )
