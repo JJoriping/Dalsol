@@ -1,4 +1,4 @@
-import { ChannelType, Client, Guild, NewsChannel, PermissionFlagsBits, Snowflake, TextBasedChannel, TextChannel, VoiceChannel } from "discord.js";
+import { ChannelType, Client, Guild, PermissionFlagsBits, Snowflake, TextBasedChannel } from "discord.js";
 import SETTINGS from "../data/settings.json";
 import { Logger } from "../utils/Logger";
 

@@ -44,11 +44,11 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
     throw Error("Invalid messagesChannel");
   }
   const usersChannelMessages = await usersChannel.messages.fetch();
-  const userCountChart24Message = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이 (24시간)")
-    || await usersChannel.send(getUserCountChartMessagePayload("24h"))
-  ;
   const userCountChart7Message = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이 (7일)")
     || await usersChannel.send(getUserCountChartMessagePayload("7d"))
+  ;
+  const userCountChart90Message = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이 (90일)")
+    || await usersChannel.send(getUserCountChartMessagePayload("90d"))
   ;
 
   const messagesChannelMessages = await messagesChannel.messages.fetch();
@@ -93,8 +93,8 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       appendFileSync(resolve(STATISTICS_DIRECTORY, "user-count.log"), `${now}\t${userCount}\n`);
       appendFileSync(resolve(STATISTICS_DIRECTORY, "online-user-count.log"), `${now}\t${onlineUserCount}\n`);
       
-      await userCountChart24Message.edit(getUserCountChartMessagePayload("24h"));
       await userCountChart7Message.edit(getUserCountChartMessagePayload("7d"));
+      await userCountChart90Message.edit(getUserCountChartMessagePayload("90d"));
     }
     if(!CLOTHES.development){
       {
@@ -127,12 +127,12 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       break;
     }
   }
-  function getUserCountChartMessagePayload(type:"24h"|"7d"):BaseMessageOptions&MessageEditOptions{
+  function getUserCountChartMessagePayload(type:"7d"|"90d"):BaseMessageOptions&MessageEditOptions{
     const canvas = createCanvas(800, 600);
-    const step = type === "24h" ? MONITOR_TERM : DateUnit.HOUR;
-    const timeSlices = type === "24h"
-      ? getTimeSlices(DateUnit.DAY, step)
-      : getTimeSlices(DateUnit.WEEK, step)
+    const step = type === "7d" ? DateUnit.HOUR : DateUnit.DAY;
+    const timeSlices = type === "7d"
+      ? getTimeSlices(DateUnit.WEEK, step)
+      : getTimeSlices(90 * DateUnit.DAY, step)
     ;
 
     new Chart(canvas, {
@@ -173,7 +173,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
     });
     return {
       embeds: [{
-        footer: { text: `여행자 수 추이 (${type === "24h" ? "24시간" : "7일"})` }
+        footer: { text: `여행자 수 추이 (${type === "7d" ? "7일" : "90일"})` }
       }],
       files: [
         { attachment: canvas.toBuffer() }
