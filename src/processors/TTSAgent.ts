@@ -10,6 +10,7 @@ const voices:Array<[RegExp|null, string]> = [
   [ /^(;[iㅑ])/, "id-ID-GadisNeural" ],
   [ /^(;[zㅋ])/, "zh-CN-XiaoyiNeural" ],
   [ /^(;[jㅓ])|[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}]/u, "ja-JP-NanamiNeural" ],
+  [ /^[\x00-\xFF]+$/, "en-US-MichelleNeural" ],
   [ null, "ko-KR-HyunsuNeural" ]
 ];
 
