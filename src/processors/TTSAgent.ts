@@ -1,4 +1,4 @@
-import { AudioPlayer, DiscordGatewayAdapterCreator, VoiceConnection, createAudioPlayer, createAudioResource, joinVoiceChannel } from "@discordjs/voice";
+import { AudioPlayer, DiscordGatewayAdapterCreator, VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, joinVoiceChannel } from "@discordjs/voice";
 import { Client, Guild } from "discord.js";
 import { MsEdgeTTS } from "msedge-tts";
 import SETTINGS from "../data/settings.json";
@@ -28,6 +28,15 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
     if(!message.content.startsWith(SETTINGS.ttsPrefix)){
       return;
     }
+    const targetChannel = message.member?.voice.channel;
+    if(!targetChannel){
+      await message.react("🤷");
+      return;
+    }
+    if(connection && connection.joinConfig.channelId !== targetChannel.id){
+      await message.react("🙅");
+      return;
+    }
     if(message.content === ";;stop"){
       audioPlayer.stop();
       await message.react("✅");
@@ -38,16 +47,16 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
       await message.react("✅");
       return;
     }
-    const targetChannel = message.member?.voice.channel;
-    if(!targetChannel){
-      await message.react("🤷");
-      return;
-    }
     if(!connection){
       connection = joinVoiceChannel({
         channelId: targetChannel.id,
         guildId: targetChannel.guildId,
         adapterCreator: guild.voiceAdapterCreator as DiscordGatewayAdapterCreator
+      });
+      connection.on('stateChange', (prev, next) => {
+        if(next.status === VoiceConnectionStatus.Disconnected){
+          connection = null;
+        }
       });
       audioPlayer = createAudioPlayer();
       audioPlayer.on('error', e => {
