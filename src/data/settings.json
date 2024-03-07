@@ -11,6 +11,11 @@
   "guestWelcomeChannel": "923189241901633596",
   "regularRole": "923200636177219645",
   "associateRole": "949956355756810300",
+  "additionalTTSChannels": [
+    "825594222580727848",
+    "809843576094588960"
+  ],
+  "ttsPrefix": ";",
   "captcha": {
     "width": 600,
     "height": 300
@@ -55,12 +60,6 @@
     "할려고": "spellchecker_gkfurh",
     "(덮|붙)혀": "spellchecker_du",
     "(간간|곰곰|깊숙|덮|붙|일일)히": "spellchecker_dl"
-  },
-  "perplexityQuestionLengthLimit": 500,
-  "perplexityChannel": "1146593399017832538",
-  "perplexityPattern": {
-    "ko": "^달솔아\\s+([\\S\\s]+)$",
-    "en": "^hey dalsol,?\\s+([\\S\\s]+)$"
   },
   "rssForum": {
     "channel": "1024645136908554321",
