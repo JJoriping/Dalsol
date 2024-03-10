@@ -1,5 +1,7 @@
 src/data/credential.json
 res/channels/*.json
+res/fluidsynth/*
+!res/fluidsynth/default.sf2
 dist/
 
 node_modules/

@@ -31,6 +31,7 @@
     "open-graph-scraper": "^4.11.1",
     "randomcolor": "^0.6.2",
     "rss-parser": "^3.12.0",
-    "selenium-webdriver": "^4.11.1"
+    "selenium-webdriver": "^4.11.1",
+    "sorrygle": "^1.3.1-d"
   }
 }
