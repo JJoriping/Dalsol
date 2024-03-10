@@ -1,5 +1,5 @@
 import { createCanvas } from "canvas";
-import { Chart, Plugin, registerables } from "chart.js";
+import { Chart, Plugin } from "chart.js";
 import { BaseMessageOptions, ChannelType, Client, Guild, MessageEditOptions, Snowflake } from "discord.js";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import { resolve } from "path";
@@ -25,7 +25,6 @@ const whiteBackground:Plugin = {
   }
 };
 
-Chart.register(...registerables);
 if(!existsSync(STATISTICS_DIRECTORY)){
   mkdirSync(STATISTICS_DIRECTORY);
 }

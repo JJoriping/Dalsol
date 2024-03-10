@@ -1,4 +1,4 @@
-import { AudioPlayer, DiscordGatewayAdapterCreator, VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, joinVoiceChannel } from "@discordjs/voice";
+import { AudioPlayer, AudioPlayerStatus, AudioResource, DiscordGatewayAdapterCreator, VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, joinVoiceChannel } from "@discordjs/voice";
 import { Client, Guild } from "discord.js";
 import { MsEdgeTTS } from "msedge-tts";
 import SETTINGS from "../data/settings.json";
@@ -16,6 +16,7 @@ const voices:Array<[RegExp|null, string]> = [
 
 export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
   const tts = new MsEdgeTTS();
+  const ttsQueue:AudioResource[] = [];
 
   let timer:NodeJS.Timeout;
   let connection:VoiceConnection|null;
@@ -62,6 +63,12 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
       audioPlayer.on('error', e => {
         Logger.warning("TTSAgent Error").put(e.message).next("Author").put(message.author.tag).out();
       });
+      audioPlayer.on('stateChange', (prev, next) => {
+        if(prev.status === AudioPlayerStatus.Playing && next.status === AudioPlayerStatus.Idle){
+          ttsQueue.shift();
+          if(ttsQueue.length) audioPlayer.play(ttsQueue[0]);
+        }
+      });
       connection.subscribe(audioPlayer);
     }
     let actualContent = message.content.slice(1, maxLength + 1);
@@ -74,14 +81,19 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
       return true;
     })!;
     await tts.setMetadata(voiceName, MsEdgeTTS.OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    
+
     const stream = tts.toStream(actualContent.slice(offset));
-    audioPlayer.play(createAudioResource(stream));
+    enqueue(createAudioResource(stream));
 
     if(timer) global.clearTimeout(timer);
     timer = global.setTimeout(leave, leaveThreshold);
     Logger.log("TTSAgent").put(actualContent).next("Author").put(message.author.tag).out();
   });
+  function enqueue(resource:AudioResource):void{
+    if(ttsQueue.push(resource) === 1){
+      audioPlayer.play(ttsQueue[0]);
+    }
+  }
   function leave():void{
     if(!connection) return;
     connection.disconnect();
