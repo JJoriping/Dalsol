@@ -27,6 +27,9 @@
     "usersChannel": "1102184141178556416",
     "messagesChannel": "984094304416985118"
   },
+  "gptChannel": "1146593399017832538",
+  "gptPattern": "^달솔아\\s+(.+)",
+  "gptImagePattern": "^달솔아\\s+(.+)\\s+그려줘$",
   "spellcheckerGuild": "938058193475600434",
   "spellcheckerPatterns": {
     "갯수": "spellchecker_rotn",
