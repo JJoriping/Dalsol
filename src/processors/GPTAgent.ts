@@ -31,15 +31,26 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
 
     if(chunk = message.content.match(new RegExp(SETTINGS.gptImagePattern))){
       if(await checkRunning()) return;
-      const query = chunk[1];
+      let query = chunk[1];
       let result:string;
+      let translated = false;
   
       try{
         running = true;
         Logger.log("GPTAgent").put(message.content).next("Author").put(message.author.tag).out();
         startSendTyping(message.channel);
+        if(/[가-힣]{2,}/.test(query)){
+          const { translation } = await g4f.translation({
+            text: query,
+            source: "ko",
+            target: "en"
+          });
+          query = translation.result;
+          translated = true;
+          Logger.log("GPTAgent Translation").put(query).out();
+        }
         result = await g4f.imageGeneration(query, {
-          provider: g4f.providers.Emi
+          provider: g4f.providers.Dalle2
         });
         running = false;
       }catch(error){
@@ -49,6 +60,7 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         return;
       }
       await message.reply({
+        content: translated ? `→ ${query}` : undefined,
         files: [{ attachment: Buffer.from(result, "base64") }]
       });
     }else if(
