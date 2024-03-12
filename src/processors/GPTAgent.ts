@@ -95,7 +95,10 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
       }
       context.messages.push([ "user", query ], [ "assistant", result ]);
       context.updatedAt = Date.now();
-      await message.reply(result).then(res => {
+      await message.reply(result.length > 2000
+        ? { files: [{ attachment: Buffer.from(result), name: `${message.id}.md` }] }
+        : result
+      ).then(res => {
         contexts[res.id] = context;
       });
     }
