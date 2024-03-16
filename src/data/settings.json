@@ -11,11 +11,11 @@
   "guestWelcomeChannel": "923189241901633596",
   "regularRole": "923200636177219645",
   "associateRole": "949956355756810300",
-  "additionalTTSChannels": [
+  "ttsChannels": [
     "825594222580727848",
     "809843576094588960"
   ],
-  "ttsPrefix": ";",
+  "ttsPrefix": "~;",
   "captcha": {
     "width": 600,
     "height": 300

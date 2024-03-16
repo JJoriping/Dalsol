@@ -8,7 +8,6 @@ import { exec } from "child_process";
 import { writeFile, unlink } from "fs/promises";
 import { resolve } from "path";
 
-const leaveThreshold = 600000;
 const voices:Array<[RegExp|null, string]> = [
   [ /^(;[sㄴ])/, "sorrygle" ],
   [ /^(;[iㅑ])/, "id-ID-GadisNeural" ],
@@ -22,12 +21,11 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
   const tts = new MsEdgeTTS();
   let ttsQueue:Array<[AudioResource, (() => void)?]> = [];
 
-  let timer:NodeJS.Timeout;
   let connection:VoiceConnection|null;
   let audioPlayer:AudioPlayer;
 
   client.on('messageCreate', async message => {
-    if(!message.channel.isVoiceBased() && !SETTINGS.additionalTTSChannels.includes(message.channelId)){
+    if(!message.channel.isVoiceBased() && !SETTINGS.ttsChannels.includes(message.channelId)){
       return;
     }
     if(!message.content.startsWith(SETTINGS.ttsPrefix)){
@@ -116,9 +114,17 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
       const stream = tts.toStream(actualContent);
       enqueue(createAudioResource(stream));
     }
-    if(timer) global.clearTimeout(timer);
-    timer = global.setTimeout(leave, leaveThreshold);
     Logger.log("TTSAgent").put(actualContent).next("Author").put(message.author.tag).out();
+  });
+  client.on('voiceStateUpdate', async (prev, next) => {
+    if(connection?.state.status !== VoiceConnectionStatus.Ready) return;
+    if(!prev.channelId || next.channelId) return;
+    const channel = await client.channels.fetch(prev.channelId);
+    if(!channel?.isVoiceBased()) throw Error(`Unexpected channel type: ${prev.channelId}`);
+    if(!channel.members.has(client.user?.id!)) return;
+    if(channel.members.size <= 1){
+      leave();
+    }
   });
   function enqueue(resource:AudioResource, callback?:() => void):void{
     if(ttsQueue.push([ resource, callback ]) === 1){
