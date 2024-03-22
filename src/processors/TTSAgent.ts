@@ -196,7 +196,8 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
           page: 0
         })
       }).then(res => res.json());
-      const target = search.list.find(v => v.title.replaceAll(" ", "").includes(content.replaceAll(" ", "")) && 'tj' in v.karaokeData);
+      const searchQuery = content.replaceAll(" ", "").toLowerCase();
+      const target = search.list.find(v => v.title.replaceAll(" ", "").toLowerCase().includes(searchQuery) && 'tj' in v.karaokeData);
       if(!target){
         message.react("🤷");
         return;
@@ -228,7 +229,7 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
       }]
     });
     const resource = createAudioResource(new Readable().wrap(audio), { inlineVolume: true });
-    resource.volume?.setVolume(0.7);
+    resource.volume?.setVolume(0.4);
     enqueue(resource, () => reply.delete());
   }
 }

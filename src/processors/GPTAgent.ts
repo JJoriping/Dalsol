@@ -73,7 +73,8 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         ? contexts[referenceId]
         : { messages: [], updatedAt: Date.now() }
       ;
-      const query = chunk?.[1] || message.content;
+      const model = chunk?.[1] === "4" ? "gpt-4" : "gpt-3.5-turbo";
+      const query = chunk?.[2] || message.content;
       let result:string;
   
       try{
@@ -83,9 +84,7 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         result = await g4f.chatCompletion([
           ...context.messages.map(v => ({ role: v[0], content: v[1] })),
           { role: "user", content: query },
-        ], {
-          model: "gpt-4"
-        });
+        ], { model });
         running = false;
       }catch(error){
         running = false;
