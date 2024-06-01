@@ -89,7 +89,7 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         ? contexts[referenceId]
         : { messages: [], updatedAt: Date.now() }
       ;
-      const model = chunk?.[1] === "4" ? "gpt-4" : "gpt-3.5-turbo";
+      const model = chunk?.[1] === "4" ? "gpt-4-32k" : "gpt-3.5-turbo";
       const query = chunk?.[2] || message.content;
       let result:string;
   
@@ -99,7 +99,7 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         startSendTyping(message.channel);
         result = await g4f.chatCompletion([
           {
-            role: "user",
+            role: "system",
             content: [
               "You are a secretary of Daldalso(달달소 in Korean) - a Discord community server.",
               "The owner of Daldalso is JJoriping(쪼리핑 in Korean), who made a online word chain game KKuTu(끄투 in Korean).",
@@ -109,7 +109,7 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
           },
           ...context.messages.map(v => ({ role: v[0], content: v[1] })),
           { role: "user", content: query },
-        ], { model });
+        ], { provider: g4f.providers.GPT, model });
         running = false;
       }catch(error){
         running = false;
