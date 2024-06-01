@@ -1078,10 +1078,10 @@ fs.realpath@^1.0.0:
   resolved "https://registry.yarnpkg.com/fs.realpath/-/fs.realpath-1.0.0.tgz#1504ad2523158caa40db4a2787cb01411994ea4f"
   integrity sha1-FQStJSMVjKpA20onh8sBQRmU6k8=
 
-g4f@^1.4.2:
-  version "1.4.2"
-  resolved "https://registry.yarnpkg.com/g4f/-/g4f-1.4.2.tgz#abfda7ee0582619dedf39a19beeaa8c404887171"
-  integrity sha512-5jJhl4X/I8tKaDcsp4S+74c9RWoL+3v3VmIGscjRqobKkkFOH1XwqEDSGKZhv9FzPZmN7s0KD7ytvf7cQMDM4g==
+g4f@^1.4.3:
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/g4f/-/g4f-1.4.3.tgz#6139bfafbde8e701fc62ea9232eebdecadba1f48"
+  integrity sha512-NaPbm9XiGofxl82lZbwpnU+KjVY9x4ohs7j3jLEnRe4dm/qe7RxSI8ypdpB3jI1x+f84IPOnKYjkhAALcKW9Tw==
   dependencies:
     "@types/signale" "^1.4.7"
     axios "^1.6.5"

@@ -31,8 +31,13 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
 
     if(chunk = message.content.match(new RegExp(SETTINGS.gptImagePattern))){
       if(await checkRunning()) return;
+      const models = [
+        "revAnimated_v122.safetensors [3f4fefd9]",
+        "Realistic_Vision_V5.0.safetensors [614d1063]",
+        "lyriel_v16.safetensors [68fceea2]"
+      ];
       let query = chunk[1];
-      let result:string;
+      let results:string[];
       let translated = false;
   
       try{
@@ -49,9 +54,16 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
           translated = true;
           Logger.log("GPTAgent Translation").put(query).out();
         }
-        result = await g4f.imageGeneration(query, {
-          provider: g4f.providers.Dalle2
-        });
+        results = await Promise.all(models.map(v => g4f.imageGeneration(query, {
+          provider: g4f.providers.Prodia,
+          providerOptions: {
+            model: v,
+            negativePrompt: `nsfw, naked, nude, deformed iris, deformed pupils, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation${chunk?.[2] ? `, ${chunk[2]}` : ""}`
+          }
+        }).catch(error => {
+          console.warn(v, error);
+          return "";
+        })));
         running = false;
       }catch(error){
         running = false;
@@ -59,9 +71,13 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         await message.react("😵");
         return;
       }
+      if(!results.filter(v => v).length){
+        await message.react("😵");
+        return;
+      }
       await message.reply({
         content: translated ? `→ ${query}` : undefined,
-        files: [{ attachment: Buffer.from(result, "base64") }]
+        files: results.filter(v => v).map(v => ({ attachment: Buffer.from(v, "base64") }))
       });
     }else if(
       (chunk = message.content.match(new RegExp(SETTINGS.gptPattern)))
@@ -82,6 +98,15 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         Logger.log("GPTAgent").put(message.content).next("Author").put(message.author.tag).out();
         startSendTyping(message.channel);
         result = await g4f.chatCompletion([
+          {
+            role: "user",
+            content: [
+              "You are a secretary of Daldalso(달달소 in Korean) - a Discord community server.",
+              "The owner of Daldalso is JJoriping(쪼리핑 in Korean), who made a online word chain game KKuTu(끄투 in Korean).",
+              "The official website of Daldalso is https://daldal.so.",
+              "\"JAVA!\"(\"자바!\" in Korean) is a rhythm game made by JJoriping, and it's available on https://sorry.daldal.so/java."
+            ].join("\n")
+          },
           ...context.messages.map(v => ({ role: v[0], content: v[1] })),
           { role: "user", content: query },
         ], { model });

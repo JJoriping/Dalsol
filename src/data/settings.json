@@ -29,7 +29,7 @@
   },
   "gptChannel": "1146593399017832538",
   "gptPattern": "^달솔아(4)?\\s+([\\s\\S]+)",
-  "gptImagePattern": "^달솔아\\s+([\\s\\S]+)\\s+그려줘$",
+  "gptImagePattern": "^달솔아\\s+([\\s\\S]+)\\s+그려줘(?:\\s+([\\s\\S]+)\\s+빼고)?$",
   "spellcheckerGuild": "938058193475600434",
   "spellcheckerPatterns": {
     "갯수": "spellchecker_rotn",
