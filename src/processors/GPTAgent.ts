@@ -40,6 +40,10 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
       let results:string[];
       let translated = false;
   
+      if(query.length < 5){
+        await message.reply("내용은 5글자 이상으로 작성해 주세요.");
+        return;
+      }
       try{
         running = true;
         Logger.log("GPTAgent").put(message.content).next("Author").put(message.author.tag).out();
