@@ -26,9 +26,6 @@ export async function processMessageLogger(client:Client, guild:Guild):Promise<v
     }
   });
   client.on('messageDelete', async message => {
-    if(message.author?.bot){
-      return;
-    }
     const data = getBasePreset("🗑 메시지 삭제", Colors.Red, message);
 
     data.embeds![0].description = `메시지 번호: ${message.id}`;

@@ -31,17 +31,17 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
 
     if(chunk = message.content.match(new RegExp(SETTINGS.gptImagePattern))){
       if(await checkRunning()) return;
-      const models = [
-        "revAnimated_v122.safetensors [3f4fefd9]",
-        "Realistic_Vision_V5.0.safetensors [614d1063]",
-        "lyriel_v16.safetensors [68fceea2]"
+      const wrappers:Array<(query:string) => string> = [
+        query => `((masterpiece)), ${query}`,
+        query => `((sfw)), (detailed), ${query}, professional majestic painting by Ed Binkley, Atey Ghailan, Studio Ghibli, by Jeremy Mann`,
+        query => `(digital painting), ${query}, fantasy art, beautiful artwork illustration`
       ];
       let query = chunk[1];
       let results:string[];
       let translated = false;
   
-      if(query.length < 5){
-        await message.reply("내용은 5글자 이상으로 작성해 주세요.");
+      if((query.match(/[\w가-힣]/g) || []).length < 5){
+        await message.reply("내용이 충분하지 않아요.");
         return;
       }
       try{
@@ -58,14 +58,19 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
           translated = true;
           Logger.log("GPTAgent Translation").put(query).out();
         }
-        results = await Promise.all(models.map(v => g4f.imageGeneration(query, {
-          provider: g4f.providers.Prodia,
-          providerOptions: {
-            model: v,
-            negativePrompt: `nsfw, naked, nude, deformed iris, deformed pupils, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, amputation${chunk?.[2] ? `, ${chunk[2]}` : ""}`
+        results = await Promise.all(wrappers.map((v, i) => g4f.imageGeneration(
+          `(best quality), ${v(query)}, (score_9, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up, high res, 4k)`,
+          {
+            provider: g4f.providers.Prodia,
+            providerOptions: {
+              model: "revAnimated_v122.safetensors [3f4fefd9]",
+              negativePrompt: `nsfw, naked, nude, nipples, deformed iris, deformed pupils, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, ugly, disgusting, amputation, bad quality, (rating_safe)${chunk?.[2] ? `, ${chunk[2]}` : ""}`,
+              samplingSteps: 20,
+              cfgScale: 30
+            }
           }
-        }).catch(error => {
-          console.warn(v, error);
+        ).catch(error => {
+          console.warn(`#${i}`, error);
           return "";
         })));
         running = false;
