@@ -80,10 +80,6 @@
         "url": "https://webzine.inven.co.kr/news/rss.php?sclass=1",
         "name": "인벤"
       },
-      "mofa": {
-        "url": "https://rss.blog.naver.com/mofakr.xml",
-        "name": "외교부"
-      },
       "stoneEntertainment": {
         "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_pwIXKXNm5KGhdEVzmY60A",
         "name": "Stone ME"

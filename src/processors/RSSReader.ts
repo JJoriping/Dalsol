@@ -33,7 +33,7 @@ export async function processRSSReader(client:Client, guild:Guild):Promise<void>
     `> 🔗 기사 원문: ${post.link}`
   ], 20 * DateUnit.MINUTE);
   // 외교부
-  addNaverRSSConsumer(forumChannel, 'mofa', 15 * DateUnit.MINUTE);
+  // addNaverRSSConsumer(forumChannel, 'mofa', 15 * DateUnit.MINUTE);
   // JTBC
   addRSSConsumer(forumChannel, 'jtbc', post => [
     `${post.contentSnippet || "(내용 없음)"}`,

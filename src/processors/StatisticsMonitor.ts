@@ -1,6 +1,6 @@
 import { createCanvas } from "canvas";
 import { Chart, Plugin } from "chart.js";
-import { BaseMessageOptions, ChannelType, Client, Guild, MessageEditOptions, Snowflake } from "discord.js";
+import { ChannelType, Client, Guild, MessageCreateOptions, MessageEditOptions, Snowflake } from "discord.js";
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import { resolve } from "path";
 import SETTINGS from "../data/settings.json";
@@ -19,7 +19,7 @@ const whiteBackground:Plugin = {
     const {ctx} = chart;
     ctx.save();
     ctx.globalCompositeOperation = 'destination-over';
-    ctx.fillStyle = options.color || '#ffffff';
+    ctx.fillStyle = (options.color || '#ffffff') as string;
     ctx.fillRect(0, 0, chart.width, chart.height);
     ctx.restore();
   }
@@ -126,7 +126,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       break;
     }
   }
-  function getUserCountChartMessagePayload(type:"7d"|"90d"):BaseMessageOptions&MessageEditOptions{
+  function getUserCountChartMessagePayload(type:"7d"|"90d"):MessageCreateOptions&MessageEditOptions{
     const canvas = createCanvas(800, 600);
     const step = type === "7d" ? DateUnit.HOUR : DateUnit.DAY;
     const timeSlices = type === "7d"
@@ -134,7 +134,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       : getTimeSlices(90 * DateUnit.DAY, step)
     ;
 
-    new Chart(canvas, {
+    new Chart(canvas as any, {
       type: "line",
       data: {
         labels: timeSlices.map(v => new Date(v).toLocaleString("ko-KR")),
@@ -145,7 +145,6 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
             borderColor: "#0cab46",
             borderWidth: 3,
             backgroundColor: "#6cf59e",
-            pointStyle: false,
             fill: true
           },
           {
@@ -154,7 +153,6 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
             borderColor: "#1b33bf",
             borderWidth: 3,
             backgroundColor: "#4060e377",
-            pointStyle: false,
             fill: true
           }
         ]
@@ -179,7 +177,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       ]
     };
   }
-  function getTextChannelRankingMessagePayload():BaseMessageOptions&MessageEditOptions{
+  function getTextChannelRankingMessagePayload():MessageCreateOptions&MessageEditOptions{
     return {
       embeds: [{
         title: " 채널별 최근 24시간 메시지 수",
@@ -193,7 +191,7 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       }]
     };
   }
-  function getTextAuthorRankingMessagePayload():BaseMessageOptions&MessageEditOptions{
+  function getTextAuthorRankingMessagePayload():MessageCreateOptions&MessageEditOptions{
     return {
       embeds: [{
         title: "🤗 유저별 최근 24시간 메시지 수",

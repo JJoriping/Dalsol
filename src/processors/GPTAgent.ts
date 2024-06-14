@@ -1,4 +1,4 @@
-import { Client, Guild, Snowflake, TextBasedChannel } from "discord.js";
+import { ButtonBuilder, ButtonStyle, Client, ComponentType, Guild, Snowflake, TextBasedChannel } from "discord.js";
 import { G4F } from "g4f";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
@@ -24,6 +24,32 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
       }
     }
   }, DateUnit.HOUR);
+  client.on('interactionCreate', async interaction => {
+    if(!interaction.isButton()) return;
+    switch(interaction.customId){
+      case "GPTAgent#remove":{
+        const remove = () => interaction.update({
+          content: "*(삭제된 메시지입니다.)*",
+          components: [],
+          files: []
+        });
+        try{
+          const origin = await interaction.message.fetchReference();
+          if(origin.author.id === interaction.user.id){
+            await remove();
+          }else{
+            await interaction.reply({
+              ephemeral: true,
+              content: `<@${origin.author.id}> 님만 메시지를 삭제할 수 있어요.`
+            });
+          }
+        }catch(error){
+          console.warn(error);
+          await remove();
+        }
+      } break;
+    }
+  });
   client.on('messageCreate', async message => {
     if(message.channelId !== SETTINGS.gptChannel) return;
     if(message.author.bot) return;
@@ -32,7 +58,7 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
     if(chunk = message.content.match(new RegExp(SETTINGS.gptImagePattern))){
       if(await checkRunning()) return;
       const wrappers:Array<(query:string) => string> = [
-        query => `((masterpiece)), ${query}`,
+        query => query,
         query => `((sfw)), (detailed), ${query}, professional majestic painting by Ed Binkley, Atey Ghailan, Studio Ghibli, by Jeremy Mann`,
         query => `(digital painting), ${query}, fantasy art, beautiful artwork illustration`
       ];
@@ -86,7 +112,19 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
       }
       await message.reply({
         content: translated ? `→ ${query}` : undefined,
-        files: results.filter(v => v).map(v => ({ attachment: Buffer.from(v, "base64") }))
+        files: results.filter(v => v).map(v => ({ attachment: Buffer.from(v, "base64") })),
+        components: [
+          {
+            type: ComponentType.ActionRow,
+            components: [
+              new ButtonBuilder({
+                customId: "GPTAgent#remove",
+                style: ButtonStyle.Secondary,
+                label: "삭제"
+              })
+            ]
+          }
+        ]
       });
     }else if(
       (chunk = message.content.match(new RegExp(SETTINGS.gptPattern)))
