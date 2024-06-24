@@ -168,7 +168,7 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
       context.updatedAt = Date.now();
       await message.reply(result.length > 2000
         ? { files: [{ attachment: Buffer.from(result), name: `${message.id}.md` }] }
-        : result
+        : sanitize(result)
       ).then(res => {
         contexts[res.id] = context;
       });
@@ -191,4 +191,7 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
       }
     }, 9 * DateUnit.SECOND);
   }
+}
+function sanitize(text:string):string{
+  return text.replace(/@(here|everyone|&?\d+)/g, "＠$1");
 }
