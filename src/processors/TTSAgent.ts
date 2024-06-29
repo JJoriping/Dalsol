@@ -204,7 +204,7 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
       }
       songData = target;
     }
-    const chunk = await fetch(`https://sorry.daldal.so/song/dynamic/${songData.karaokeData['tj']}/pack`, {
+    const chunk = await fetch(`https://sorry.daldal.so/song/dynamic/tj/${songData.karaokeData['tj']}/pack`, {
       headers: {
         'Authorization': `Basic ${CREDENTIAL.sorryfieldBasicAuthKey}`
       }
@@ -229,7 +229,7 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
       }]
     });
     const resource = createAudioResource(new Readable().wrap(audio), { inlineVolume: true });
-    resource.volume?.setVolume(0.4);
+    resource.volume?.setVolume(0.1);
     enqueue(resource, () => reply.delete());
   }
 }
