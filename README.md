@@ -5,6 +5,9 @@
 - `;;i ...` TTS (인도네시아어)
 - `;;z ...` TTS (중국어)
 - `;;j ...` TTS (일본어)
+- `;;f ...` TTS (프랑스어)
+- `;;t ...` TTS (스페인어)
+- `;;d ...` TTS (아랍어)
 - `;;s ...` [쏘리글](https://github.com/JJoriping/Sorrygle) 재생
 - `;;p #...` [쏘리들](https://sorry.daldal.so) 곡 재생 (쏘리들 곡 번호)
 - `;;p ...` [쏘리들](https://sorry.daldal.so) 곡 재생 (곡명)

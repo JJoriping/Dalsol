@@ -38,6 +38,7 @@ async function main():Promise<void>{
 
     if(CLOTHES.development){
       await processTTSAgent(client, guild);
+      await processGPTAgent(client, guild);
     }else{
       await processRSSReader(client, guild);
       await processScamChecker(client, guild);

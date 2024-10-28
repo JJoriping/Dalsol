@@ -17,9 +17,12 @@ const voices:Array<[RegExp|null, string]> = [
   [ /^(;[pㅔ]\s*)/, "sorryfield" ],
   [ /^(;[iㅑ])/, "id-ID-GadisNeural" ],
   [ /^(;[zㅋ])/, "zh-CN-XiaoyiNeural" ],
+  [ /^(;[fㄹ])/, "fr-FR-DeniseNeural" ],
+  [ /^(;[tㅅ])/, "es-ES-AlvaroNeural" ],
+  [ /^(;[dㅇ])/, "ar-SA-HamedNeural" ],
   [ /^(;[jㅓ])|[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}]/u, "ja-JP-NanamiNeural" ],
   [ /^[\x00-\xFF]+$/, "en-US-MichelleNeural" ],
-  [ null, "ko-KR-HyunsuNeural" ]
+  [ null, "ko-KR-InJoonNeural" ]
 ];
 
 export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
@@ -29,7 +32,7 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
 
   let connection:VoiceConnection|null;
   let audioPlayer:AudioPlayer;
-
+  
   client.on('messageCreate', async message => {
     if(!message.channel.isVoiceBased() && !SETTINGS.ttsChannels.includes(message.channelId)){
       return;
@@ -89,7 +92,7 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
       if(chunk[1]) offset = chunk[1].length;
       return true;
     })!;
-    actualContent = actualContent.slice(offset);
+    actualContent = actualContent.slice(offset).replace(/[ㄱ-ㅎ](?=[ㄱ-ㅎ])/g, "$& ");
 
     switch(voiceName){
       case "sorrygle":
