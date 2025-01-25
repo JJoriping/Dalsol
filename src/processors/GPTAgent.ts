@@ -1,14 +1,13 @@
 import { ButtonBuilder, ButtonStyle, Client, ComponentType, Guild, Snowflake, TextBasedChannel } from "discord.js";
-import { G4F } from "g4f";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
 import { Logger } from "../utils/Logger";
 import { schedule } from "../utils/System";
+import { gpt } from "gpti";
 
 export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
   const gptChannel = await guild.channels.fetch(SETTINGS.gptChannel);
   if(!gptChannel?.isTextBased()) throw Error(`Invalid gptChannel: ${SETTINGS.gptChannel}`);
-  const g4f = new G4F();
   const contexts:Record<Snowflake, {
     messages: Array<[role:"user"|"assistant", message:string]>,
     updatedAt: number
@@ -56,76 +55,76 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
     let chunk:RegExpMatchArray|null;
 
     if(chunk = message.content.match(new RegExp(SETTINGS.gptImagePattern))){
-      if(await checkRunning()) return;
-      const wrappers:Array<(query:string) => string> = [
-        query => query,
-        query => `((sfw)), (detailed), ${query}, professional majestic painting by Ed Binkley, Atey Ghailan, Studio Ghibli, by Jeremy Mann`,
-        query => `(digital painting), ${query}, fantasy art, beautiful artwork illustration`
-      ];
-      let query = chunk[1];
-      let results:string[];
-      let translated = false;
+      // if(await checkRunning()) return;
+      // const wrappers:Array<(query:string) => string> = [
+      //   query => query,
+      //   query => `((sfw)), (detailed), ${query}, professional majestic painting by Ed Binkley, Atey Ghailan, Studio Ghibli, by Jeremy Mann`,
+      //   query => `(digital painting), ${query}, fantasy art, beautiful artwork illustration`
+      // ];
+      // let query = chunk[1];
+      // let results:string[];
+      // let translated = false;
   
-      if((query.match(/[\w가-힣]/g) || []).length < 5){
-        await message.reply("내용이 충분하지 않아요.");
-        return;
-      }
-      try{
-        running = true;
-        Logger.log("GPTAgent").put(message.content).next("Author").put(message.author.tag).out();
-        startSendTyping(message.channel);
-        if(/[가-힣]{2,}/.test(query)){
-          const { translation } = await g4f.translation({
-            text: query,
-            source: "ko",
-            target: "en"
-          });
-          query = translation.result;
-          translated = true;
-          Logger.log("GPTAgent Translation").put(query).out();
-        }
-        results = await Promise.all(wrappers.map((v, i) => g4f.imageGeneration(
-          `(best quality), ${v(query)}, (score_9, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up, high res, 4k)`,
-          {
-            provider: g4f.providers.Prodia,
-            providerOptions: {
-              model: "revAnimated_v122.safetensors [3f4fefd9]",
-              negativePrompt: `nsfw, naked, nude, nipples, deformed iris, deformed pupils, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, ugly, disgusting, amputation, bad quality, (rating_safe)${chunk?.[2] ? `, ${chunk[2]}` : ""}`,
-              samplingSteps: 20,
-              cfgScale: 30
-            }
-          }
-        ).catch(error => {
-          console.warn(`#${i}`, error);
-          return "";
-        })));
-        running = false;
-      }catch(error){
-        running = false;
-        Logger.warning("GPTAgent").put(error).out();
-        await message.react("😵");
-        return;
-      }
-      if(!results.filter(v => v).length){
-        await message.react("😵");
-        return;
-      }
-      await message.reply({
-        content: translated ? `→ ${query}` : undefined,
-        files: results.filter(v => v).map(v => ({ attachment: Buffer.from(v, "base64") })),
-        components: [
-          {
-            type: ComponentType.ActionRow,
-            components: [
-              new ButtonBuilder({
-                customId: "GPTAgent#remove",
-                style: ButtonStyle.Secondary,
-                label: "삭제"
-              })
-            ]
-          }
-        ]
-      });
+      // if((query.match(/[\w가-힣]/g) || []).length < 5){
+      //   await message.reply("내용이 충분하지 않아요.");
+      //   return;
+      // }
+      // try{
+      //   running = true;
+      //   Logger.log("GPTAgent").put(message.content).next("Author").put(message.author.tag).out();
+      //   startSendTyping(message.channel);
+      //   if(/[가-힣]{2,}/.test(query)){
+      //     const { translation } = await g4f.translation({
+      //       text: query,
+      //       source: "ko",
+      //       target: "en"
+      //     });
+      //     query = translation.result;
+      //     translated = true;
+      //     Logger.log("GPTAgent Translation").put(query).out();
+      //   }
+      //   results = await Promise.all(wrappers.map((v, i) => g4f.imageGeneration(
+      //     `(best quality), ${v(query)}, (score_9, score_8_up, score_7_up, score_6_up, score_5_up, score_4_up, high res, 4k)`,
+      //     {
+      //       provider: g4f.providers.Prodia,
+      //       providerOptions: {
+      //         model: "revAnimated_v122.safetensors [3f4fefd9]",
+      //         negativePrompt: `nsfw, naked, nude, nipples, deformed iris, deformed pupils, mutated hands and fingers, deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, ugly, disgusting, amputation, bad quality, (rating_safe)${chunk?.[2] ? `, ${chunk[2]}` : ""}`,
+      //         samplingSteps: 20,
+      //         cfgScale: 30
+      //       }
+      //     }
+      //   ).catch(error => {
+      //     console.warn(`#${i}`, error);
+      //     return "";
+      //   })));
+      //   running = false;
+      // }catch(error){
+      //   running = false;
+      //   Logger.warning("GPTAgent").put(error).out();
+      //   await message.react("😵");
+      //   return;
+      // }
+      // if(!results.filter(v => v).length){
+      //   await message.react("😵");
+      //   return;
+      // }
+      // await message.reply({
+      //   content: translated ? `→ ${query}` : undefined,
+      //   files: results.filter(v => v).map(v => ({ attachment: Buffer.from(v, "base64") })),
+      //   components: [
+      //     {
+      //       type: ComponentType.ActionRow,
+      //       components: [
+      //         new ButtonBuilder({
+      //           customId: "GPTAgent#remove",
+      //           style: ButtonStyle.Secondary,
+      //           label: "삭제"
+      //         })
+      //       ]
+      //     }
+      //   ]
+      // });
     }else if(
       (chunk = message.content.match(new RegExp(SETTINGS.gptPattern)))
       || (message.reference?.messageId && message.reference.messageId in contexts)
@@ -144,19 +143,21 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         running = true;
         Logger.log("GPTAgent").put(message.content).next("Author").put(message.author.tag).out();
         startSendTyping(message.channel);
-        result = await g4f.chatCompletion([
-          {
-            role: "system",
-            content: [
-              "You are a secretary of Daldalso(달달소 in Korean) - a Discord community server.",
-              "The owner of Daldalso is JJoriping(쪼리핑 in Korean), who made a online word chain game KKuTu(끄투 in Korean).",
-              "The official website of Daldalso is https://daldal.so.",
-              "\"JAVA!\"(\"자바!\" in Korean) is a rhythm game made by JJoriping, and it's available on https://sorry.daldal.so/java."
-            ].join("\n")
-          },
-          ...context.messages.map(v => ({ role: v[0], content: v[1] })),
-          { role: "user", content: query },
-        ], { provider: g4f.providers.GPT, model });
+        result = await gpt.v3({
+          messages: [
+            {
+              role: "system" as any,
+              content: [
+                "You are a secretary of Daldalso(달달소 in Korean) - a Discord community server.",
+                "The owner of Daldalso is JJoriping(쪼리핑 in Korean), who made a online word chain game KKuTu(끄투 in Korean).",
+                "The official website of Daldalso is https://daldal.so.",
+                "\"JAVA!\"(\"자바!\" in Korean) is a rhythm game made by JJoriping, and it's available on https://sorry.daldal.so/java."
+              ].join("\n")
+            },
+            ...context.messages.map(v => ({ role: v[0], content: v[1] })),
+            { role: "user", content: query },
+          ]
+        }).then(res => (res as { 'message': string })?.message || "(unknown)");
         running = false;
       }catch(error){
         running = false;
