@@ -37,15 +37,15 @@ async function main():Promise<void>{
     const guild = await client.guilds.fetch(SETTINGS.guild);
 
     if(CLOTHES.development){
-      await processGPTAgent(client, guild);
+      await processStatisticsMonitor(client, guild);
     }else{
+      await processGPTAgent(client, guild);
       await processRSSReader(client, guild);
       await processScamChecker(client, guild);
       await processTextRoleMaker(client, guild);
       await processMessageLogger(client, guild);
       await processGameEventMaker(client, guild);
       await processChannelActivityLogger(client, guild);
-      await processStatisticsMonitor(client, guild);
       await processSpellchecker(client, guild);
       await processTTSAgent(client, guild);
       await processGPTAgent(client, guild);

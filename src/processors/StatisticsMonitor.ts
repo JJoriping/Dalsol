@@ -1,7 +1,6 @@
-import { createCanvas } from "canvas";
 import { Chart, Plugin } from "chart.js";
 import { ChannelType, Client, Guild, MessageCreateOptions, MessageEditOptions, Snowflake } from "discord.js";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
+import { appendFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, unlinkSync } from "fs";
 import { resolve } from "path";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
@@ -10,6 +9,13 @@ import { Logger } from "../utils/Logger";
 import { schedule } from "../utils/System";
 import { RANKING_EMOJI } from "../utils/Text";
 import { orderBy, reduceToTable } from "../utils/Utility";
+const { Context } = require("pureimage");
+Context.prototype.resetTransform = function(){};
+Context.prototype.setLineDash = function(){};
+Object.defineProperty(Context.prototype, "font", {
+  // NOTE I don't know why.
+  set() {},
+});
 
 const MONITOR_TERM = 10 * DateUnit.MINUTE;
 const STATISTICS_DIRECTORY = resolve("dist", "statistics");
@@ -44,10 +50,13 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
   }
   const usersChannelMessages = await usersChannel.messages.fetch();
   const userCountChart7Message = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이 (7일)")
-    || await usersChannel.send(getUserCountChartMessagePayload("7d"))
+    || await usersChannel.send(await getUserCountChartMessagePayload("7d"))
   ;
   const userCountChart90Message = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이 (90일)")
-    || await usersChannel.send(getUserCountChartMessagePayload("90d"))
+    || await usersChannel.send(await getUserCountChartMessagePayload("90d"))
+  ;
+  const userCountChart365Message = usersChannelMessages.find(v => v.embeds[0].footer?.text === "여행자 수 추이 (1년)")
+    || await usersChannel.send(await getUserCountChartMessagePayload("1y"))
   ;
 
   const messagesChannelMessages = await messagesChannel.messages.fetch();
@@ -87,13 +96,14 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
     {
       let text = `👪・여행자・${onlineUserCount.toLocaleString()}⟋${userCount.toLocaleString()}`;
 
-      await usersChannel.setName(text);
+      if(!CLOTHES.development) await usersChannel.setName(text);
       logger.next("Users").put(text);
       appendFileSync(resolve(STATISTICS_DIRECTORY, "user-count.log"), `${now}\t${userCount}\n`);
       appendFileSync(resolve(STATISTICS_DIRECTORY, "online-user-count.log"), `${now}\t${onlineUserCount}\n`);
       
-      await userCountChart7Message.edit(getUserCountChartMessagePayload("7d"));
-      await userCountChart90Message.edit(getUserCountChartMessagePayload("90d"));
+      await userCountChart7Message.edit(await getUserCountChartMessagePayload("7d"));
+      await userCountChart90Message.edit(await getUserCountChartMessagePayload("90d"));
+      await userCountChart365Message.edit(await getUserCountChartMessagePayload("1y"));
     }
     if(!CLOTHES.development){
       {
@@ -126,14 +136,21 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       break;
     }
   }
-  function getUserCountChartMessagePayload(type:"7d"|"90d"):MessageCreateOptions&MessageEditOptions{
-    const canvas = createCanvas(800, 600);
+  async function getUserCountChartMessagePayload(type:"7d"|"90d"|"1y"):Promise<MessageCreateOptions&MessageEditOptions>{
+    const { make, encodePNGToStream, registerFont } = await import("pureimage");
+    const fileName = `${Date.now()}.png`;
+    const canvas = make(800, 600);
     const step = type === "7d" ? DateUnit.HOUR : DateUnit.DAY;
     const timeSlices = type === "7d"
       ? getTimeSlices(DateUnit.WEEK, step)
-      : getTimeSlices(90 * DateUnit.DAY, step)
+      : type === "90d"
+      ? getTimeSlices(90 * DateUnit.DAY, step)
+      : getTimeSlices(DateUnit.YEAR, step)
     ;
+    const font = registerFont(resolve("res", "ChartFont.ttf"), "ChartFont");
 
+    await font.load();
+    Chart.defaults.font.family = `'${font.family}'`;
     new Chart(canvas as any, {
       type: "line",
       data: {
@@ -168,12 +185,16 @@ export async function processStatisticsMonitor(client:Client, guild:Guild):Promi
       },
       plugins: [ whiteBackground ]
     });
+    await encodePNGToStream(canvas, createWriteStream(fileName));
+    const buffer = readFileSync(fileName);
+    unlinkSync(fileName);
+
     return {
       embeds: [{
-        footer: { text: `여행자 수 추이 (${type === "7d" ? "7일" : "90일"})` }
+        footer: { text: `여행자 수 추이 (${type === "7d" ? "7일" : type === "90d" ? "90일" : "1년"})` }
       }],
       files: [
-        { attachment: canvas.toBuffer() }
+        { attachment: buffer }
       ]
     };
   }
