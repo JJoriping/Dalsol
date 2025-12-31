@@ -3,7 +3,7 @@ import { exec } from "child_process";
 import { Client, Colors, Guild, Message } from "discord.js";
 import { unlink, writeFile } from "fs/promises";
 import JSZip from "jszip";
-import { MsEdgeTTS } from "msedge-tts";
+import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 import fetch from "node-fetch";
 import { resolve } from "path";
 import { Sorrygle } from "sorrygle";
@@ -102,9 +102,9 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
         await handleSorryfield(message, actualContent);
         break;
       default: {
-        await tts.setMetadata(voiceName, MsEdgeTTS.OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
     
-        const stream = tts.toStream(actualContent);
+        const { audioStream: stream } = tts.toStream(actualContent);
         enqueue(createAudioResource(stream));
       }
     }

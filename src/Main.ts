@@ -37,6 +37,7 @@ async function main():Promise<void>{
     const guild = await client.guilds.fetch(SETTINGS.guild);
 
     if(CLOTHES.development){
+      await processTTSAgent(client, guild);
     }else{
       await processGPTAgent(client, guild);
       await processRSSReader(client, guild);

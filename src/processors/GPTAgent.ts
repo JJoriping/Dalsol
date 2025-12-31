@@ -1,9 +1,10 @@
-import { ButtonBuilder, ButtonStyle, Client, ComponentType, Guild, Snowflake, TextBasedChannel } from "discord.js";
+import { Client, Guild, Snowflake, TextBasedChannel } from "discord.js";
+import { bing, gpt } from "gpti";
 import SETTINGS from "../data/settings.json";
 import { DateUnit } from "../enums/DateUnit";
 import { Logger } from "../utils/Logger";
 import { schedule } from "../utils/System";
-import { gpt } from "gpti";
+import { sleep } from "../utils/Utility";
 
 export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
   const gptChannel = await guild.channels.fetch(SETTINGS.gptChannel);
@@ -143,21 +144,27 @@ export async function processGPTAgent(client:Client, guild:Guild):Promise<void>{
         running = true;
         Logger.log("GPTAgent").put(message.content).next("Author").put(message.author.tag).out();
         startSendTyping(message.channel);
-        result = await gpt.v3({
-          messages: [
-            {
-              role: "system" as any,
-              content: [
-                "You are a secretary of Daldalso(달달소 in Korean) - a Discord community server.",
-                "The owner of Daldalso is JJoriping(쪼리핑 in Korean), who made a online word chain game KKuTu(끄투 in Korean).",
-                "The official website of Daldalso is https://daldal.so.",
-                "\"JAVA!\"(\"자바!\" in Korean) is a rhythm game made by JJoriping, and it's available on https://sorry.daldal.so/java."
-              ].join("\n")
-            },
-            ...context.messages.map(v => ({ role: v[0], content: v[1] })),
-            { role: "user", content: query },
-          ]
-        }).then(res => (res as { 'message': string })?.message || "(unknown)");
+        result = await Promise.race([
+          bing({
+            messages: [
+              {
+                role: "system" as any,
+                content: [
+                  "I am a secretary of Daldalso(달달소 in Korean) - a Discord community server.",
+                  "The owner of Daldalso is JJoriping(쪼리핑 in Korean), who made a online word chain game KKuTu(끄투 in Korean).",
+                  "The official website of Daldalso is https://daldal.so.",
+                  "\"JAVA!\"(\"자바!\" in Korean) is a rhythm game made by JJoriping, and it's available on https://sorry.daldal.so/java."
+                ].join("\n")
+              },
+              ...context.messages.map(v => ({ role: v[0], content: v[1] })),
+              { role: "user", content: query }
+            ],
+            conversation_style: "Balanced"
+          }).then(res => (res as { 'message': string })?.message || "(unknown)"),
+          sleep(5 * DateUnit.MINUTE).then(() => {
+            throw Error("GPT Timeout");
+          })
+        ]);
         running = false;
       }catch(error){
         running = false;
