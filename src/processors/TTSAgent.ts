@@ -3,7 +3,6 @@ import { exec } from "child_process";
 import { Client, Colors, Guild, Message } from "discord.js";
 import { unlink, writeFile } from "fs/promises";
 import JSZip from "jszip";
-import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 import fetch from "node-fetch";
 import { resolve } from "path";
 import { Sorrygle } from "sorrygle";
@@ -11,22 +10,25 @@ import { Readable } from "stream";
 import CREDENTIAL from "../data/credential.json";
 import SETTINGS from "../data/settings.json";
 import { Logger } from "../utils/Logger";
+import { TextToSpeechClient } from "@google-cloud/text-to-speech";
 
 const voices:Array<[RegExp|null, string]> = [
   [ /^(;[sㄴ]\s*)/, "sorrygle" ],
   [ /^(;[pㅔ]\s*)/, "sorryfield" ],
-  [ /^(;[iㅑ])/, "id-ID-GadisNeural" ],
-  [ /^(;[zㅋ])/, "zh-CN-XiaoyiNeural" ],
-  [ /^(;[fㄹ])/, "fr-FR-DeniseNeural" ],
-  [ /^(;[tㅅ])/, "es-ES-AlvaroNeural" ],
-  [ /^(;[dㅇ])/, "ar-SA-HamedNeural" ],
-  [ /^(;[jㅓ])|[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}]/u, "ja-JP-NanamiNeural" ],
-  [ /^[\x00-\xFF]+$/, "en-US-MichelleNeural" ],
-  [ null, "ko-KR-InJoonNeural" ]
+  [ /^(;[iㅑ])/, "id-ID" ],
+  [ /^(;[zㅋ])/, "zh-CN" ],
+  [ /^(;[fㄹ])/, "fr-FR" ],
+  [ /^(;[tㅅ])/, "es-ES" ],
+  [ /^(;[dㅇ])/, "ar-SA" ],
+  [ /^(;[jㅓ])|[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}]/u, "ja-JP" ],
+  [ /^[\x00-\xFF]+$/, "en-US" ],
+  [ null, "ko-KR" ]
 ];
 
 export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
-  const tts = new MsEdgeTTS();
+  const tts = new TextToSpeechClient({
+    apiKey: CREDENTIAL.googleAPIKey
+  });
   const doublePrefix = SETTINGS.ttsPrefix.repeat(2);
   let ttsQueue:Array<[AudioResource, (() => void)?]> = [];
 
@@ -85,7 +87,7 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
     }
     let actualContent = message.content.slice(1);
     let offset = 0;
-    const [ , voiceName ] = voices.find(([ pattern ]) => {
+    const [ , locale ] = voices.find(([ pattern ]) => {
       if(pattern === null) return true;
       const chunk = actualContent.match(pattern);
       if(!chunk) return false;
@@ -94,7 +96,7 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
     })!;
     actualContent = actualContent.slice(offset).replace(/[ㄱ-ㅎ](?=[ㄱ-ㅎ])/g, "$& ");
 
-    switch(voiceName){
+    switch(locale){
       case "sorrygle":
         await handleSorrygle(message, actualContent);
         break;
@@ -102,10 +104,12 @@ export async function processTTSAgent(client:Client, guild:Guild):Promise<void>{
         await handleSorryfield(message, actualContent);
         break;
       default: {
-        await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    
-        const { audioStream: stream } = tts.toStream(actualContent);
-        enqueue(createAudioResource(stream));
+        const [ res ] = await tts.synthesizeSpeech({
+          input: { text: actualContent },
+          voice: { languageCode: locale },
+          audioConfig: { audioEncoding: "OGG_OPUS" }
+        });
+        enqueue(createAudioResource(Readable.from(res.audioContent as Buffer)));
       }
     }
     Logger.log("TTSAgent").put(actualContent).next("Author").put(message.author.tag).out();
