@@ -85,5 +85,10 @@
         "name": "Stone ME"
       }
     }
+  },
+  "notion": {
+    "channel": "1478733420820566016",
+    "dataSource": "2b1e2683-11e1-8094-9a42-000bea0dc873",
+    "interval": 60000
   }
 }

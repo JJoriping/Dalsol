@@ -13,6 +13,7 @@ import { Logger } from "./utils/Logger";
 import { processSpellchecker } from "./processors/Spellchecker";
 import { processTTSAgent } from "./processors/TTSAgent";
 import { processGPTAgent } from "./processors/GPTAgent";
+import { processNotionAgent } from "./processors/NotionAgent";
 
 const client = new Client({
   intents: [
@@ -37,8 +38,9 @@ async function main():Promise<void>{
     const guild = await client.guilds.fetch(SETTINGS.guild);
 
     if(CLOTHES.development){
-      await processTTSAgent(client, guild);
+      await processNotionAgent(client, guild);
     }else{
+      await processTTSAgent(client, guild);
       await processGPTAgent(client, guild);
       await processRSSReader(client, guild);
       await processScamChecker(client, guild);
@@ -49,6 +51,7 @@ async function main():Promise<void>{
       await processSpellchecker(client, guild);
       await processTTSAgent(client, guild);
       await processStatisticsMonitor(client, guild);
+      await processNotionAgent(client, guild);
     }
     Logger.success("Discord").put(client.user?.tag).out();
   });
