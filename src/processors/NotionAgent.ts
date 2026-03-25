@@ -7,17 +7,31 @@ import { schedule } from "../utils/System";
 import { Logger } from "../utils/Logger";
 
 type NotionObject = PageObjectResponse['properties'][string];
+type FetchedItem = {
+  'id': string,
+  'title': string,
+  'category': string,
+  'creator': {
+    'name': string,
+    'thumbnail': string|null
+  },
+  'status': string,
+  'url': string,
+  'updatedAt': number
+};
 const notion = new NotionClient({
   auth: CREDENTIAL.notionAPIKey
 });
+const cache:Record<string, FetchedItem> = {};
+let lastUpdatedAt = 0;
 
 export async function processNotionAgent(client:Client, guild:Guild):Promise<void>{
   const notionChannel = await guild.channels.fetch(SETTINGS.notion.channel);
   if(!notionChannel?.isTextBased()) throw Error(`Invalid notionChannel: ${SETTINGS.notion.channel}`);
-  let list = await fetchDataSource();
+  for(const v of await fetchDataSource()) cache[v.id] = v;
 
   Logger.info("NotionAgent Activation")
-    .next("Length").put(list.length)
+    .next("Length").put(Object.keys(cache).length)
     .out()
   ;
   schedule(async () => {
@@ -26,7 +40,7 @@ export async function processNotionAgent(client:Client, guild:Guild):Promise<voi
 
     // 1. 새로 생김
     for(const v of nextList){
-      if(list.some(w => w.id === v.id)) break;
+      if(v.id in cache) break;
       embeds.push({
         title: "🆕 새 페이지",
         color: Colors.Green,
@@ -44,7 +58,7 @@ export async function processNotionAgent(client:Client, guild:Guild):Promise<voi
     }
     // 2. 변경됨
     for(const v of nextList){
-      const prev = list.find(w => w.id === v.id);
+      const prev = cache[v.id];
       if(!prev) continue;
       if(v.title === prev.title && v.category === prev.category && v.status === prev.status) continue;
       embeds.push({
@@ -61,30 +75,24 @@ export async function processNotionAgent(client:Client, guild:Guild):Promise<voi
         },
         url: v.url
       });
+      cache[v.id] = v;
     }
     for(let i = 0; i < embeds.length; i += 10){
       await notionChannel.send({
         embeds: embeds.slice(i, i + 10)
       });
     }
-
-    list = nextList;
   }, SETTINGS.notion.interval);
 }
-async function fetchDataSource():Promise<Array<{
-  'id': string,
-  'title': string,
-  'category': string,
-  'creator': {
-    'name': string,
-    'thumbnail': string|null
-  },
-  'status': string,
-  'url': string,
-  'updatedAt': number
-}>>{
+async function fetchDataSource():Promise<FetchedItem[]>{
   const R = await notion.dataSources.query({
     data_source_id: SETTINGS.notion.dataSource,
+    filter: {
+      timestamp: "last_edited_time",
+      last_edited_time: {
+        after: new Date(lastUpdatedAt).toISOString()
+      }
+    },
     sorts: [
       {
         timestamp: "last_edited_time",
@@ -112,6 +120,8 @@ async function fetchDataSource():Promise<Array<{
     const user = await notion.users.retrieve({ user_id: v });
     users[v] = user;
   }
+  lastUpdatedAt = Date.now();
+
   return R.results.map(v => {
     assert(isFullPage(v));
     const creatorProperty = v.properties['창작자'];
